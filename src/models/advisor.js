@@ -12,6 +12,10 @@ import Anthropic from '@anthropic-ai/sdk';
 
 export const DAILY_CALL_LIMIT = 20;
 export const MAX_REPLY_TOKENS = 1024;
+// Persisted turns per conversation, and how many of them are re-sent
+// as context on each call (token guardrail).
+export const HISTORY_KEEP_LIMIT = 10;
+export const HISTORY_SEND_LIMIT = 6;
 
 const STAGE_MODELS = {
   explore: 'claude-haiku-4-5',
@@ -148,6 +152,28 @@ export function recordCall(usage, today) {
   return { date: today, count: usage.count + 1 };
 }
 
+/** Trims a stored conversation to the most recent turns. */
+export function capHistory(turns, maxTurns = HISTORY_KEEP_LIMIT) {
+  return turns.length <= maxTurns ? turns : turns.slice(-maxTurns);
+}
+
+/**
+ * Builds the messages array for one call: the most recent real turns
+ * (mock turns carry no API context) followed by the new question.
+ */
+export function buildMessages(history, question, limit = HISTORY_SEND_LIMIT) {
+  const recent = history
+    .filter((turn) => !turn.mock && typeof turn.rawReply === 'string')
+    .slice(-limit);
+  return [
+    ...recent.flatMap((turn) => [
+      { role: 'user', content: turn.question },
+      { role: 'assistant', content: turn.rawReply },
+    ]),
+    { role: 'user', content: question },
+  ];
+}
+
 export function todayKey() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -188,13 +214,7 @@ export async function askAdvisor({
   }
 
   const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
-  const messages = [
-    ...history.flatMap((turn) => [
-      { role: 'user', content: turn.question },
-      { role: 'assistant', content: turn.rawReply },
-    ]),
-    { role: 'user', content: question },
-  ];
+  const messages = buildMessages(history, question);
 
   const response = await client.messages.create({
     model,

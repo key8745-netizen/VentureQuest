@@ -16,7 +16,14 @@ import { buildQuestionPrompt, pickModelForStage } from '../models/advisor.js';
  * Guided interview shown before the dashboard: one question per
  * screen, then a summary that turns the answers into the user's plan.
  */
-export default function OnboardingWizard({ onComplete, apiKey, usage, onUsageChange }) {
+export default function OnboardingWizard({
+  onComplete,
+  apiKey,
+  usage,
+  onUsageChange,
+  advisorHistories,
+  onAdvisorHistoryChange,
+}) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   // Number inputs keep raw strings so typing feels natural.
@@ -147,6 +154,10 @@ export default function OnboardingWizard({ onComplete, apiKey, usage, onUsageCha
             hint: question.hint,
             answers,
           })}
+          history={advisorHistories[`wizard:${question.id}`] ?? []}
+          onHistoryChange={(turns) =>
+            onAdvisorHistoryChange(`wizard:${question.id}`, turns)
+          }
           usage={usage}
           onUsageChange={onUsageChange}
           placeholder="例如:我不知道固定成本要算哪些…"

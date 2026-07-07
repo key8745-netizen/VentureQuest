@@ -21,6 +21,8 @@ export default function AdvisorPanel({
   onUsageChange,
   onAdoptTask,
   onAdoptGoal,
+  advisorHistories,
+  onAdvisorHistoryChange,
 }) {
   const [showKeyForm, setShowKeyForm] = useState(false);
   const [keyDraft, setKeyDraft] = useState('');
@@ -90,6 +92,10 @@ export default function AdvisorPanel({
         apiKey={apiKey}
         model={model}
         systemPrompt={systemPrompt}
+        history={advisorHistories[`stage:${activeStage.id}`] ?? []}
+        onHistoryChange={(turns) =>
+          onAdvisorHistoryChange(`stage:${activeStage.id}`, turns)
+        }
         usage={usage}
         onUsageChange={onUsageChange}
         onAdoptTask={(task) => onAdoptTask(activeStage.id, task)}

@@ -134,6 +134,7 @@ App shell 與跨區塊狀態：
 - 沒有 `profile` 時顯示 OnboardingWizard，答完才進儀表板。
 - `customizations`：使用者採用的顧問建議（per-stage 額外 goals/tasks）。
 - `breakdowns`：目標的 AI 拆解子項目（`{ [parentId]: [{id,label}] }`，遞迴）。
+- `advisorHistories`：每個對話（`stage:*`／`goal:*`／`wizard:*`）的持久化歷史，每個最多留 10 輪；「已加入」旗標存在輪次上，重新整理後按鈕保持鎖定。
 - 專業 / 白話模式切換、Reset（含 confirm）、Export / Import JSON。
 
 ### `src/components/`
@@ -179,6 +180,7 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 - `buildStagePrompt` / `buildQuestionPrompt` / `buildGoalPrompt`：系統提示詞（goal 版帶父項目路徑,回覆可含 steps 拆解）。
 - `parseAdvisorReply(text)`：解析 JSON 回覆，clamp：最多 3 任務（5–30 分鐘）、2 目標、5 個拆解步驟。
 - `canAskToday` / `recordCall` / `DAILY_CALL_LIMIT`：每日呼叫上限。
+- `capHistory` / `buildMessages`：每個對話最多存 10 輪；呼叫 API 只帶最近 6 輪真實對話（mock 不算）。
 - `askAdvisor({...})`：真正的 API 呼叫；無 key 回傳寫死 mock。
 
 ### `src/models/orgTree.js`
@@ -207,12 +209,12 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
 ## 5. 測試狀態
 
-目前測試覆蓋（28/28 pass）：
+目前測試覆蓋（30/30 pass）：
 
 - 財務生死線、虧錢模型拒絕、在職節奏風險判斷。
 - 引導問答：題目順序、答案驗證、profile 產生（含探索分支與 schema 檢查）。
 - 五階段路線圖：階段結構、目標全勾才解鎖下一階段、今日 micro-task 篩選、顧問建議合併、進度計算、拆解子項目的遞迴完成與階段解鎖。
-- AI 顧問：模型分級、提示詞內容、回覆解析（JSON／純文字／code fence）、建議 clamp、每日上限與跨日重置。
+- AI 顧問：模型分級、提示詞內容、回覆解析（JSON／純文字／code fence）、建議 clamp、每日上限與跨日重置、對話歷史裁剪與 API 上下文組裝（排除 mock、限最近 6 輪）。
 - Org-Tree：產業無感節點、子樹複製、管理節點解鎖。
 - 文案模式切換與 fallback。
 
@@ -244,10 +246,10 @@ npm test
 - [x] 五階段路線圖（含可勾選過關條件）。
 - [x] AI 顧問（分級模型、寫死防護欄、mock fallback）。
 - [x] 過關條件「問 AI」遞迴拆解成子項目。
+- [x] 顧問對話歷史持久化（per-context、10 輪上限、採用狀態一併保存）。
 
 ### P2
 
-- 顧問對話歷史持久化（目前重新整理就清空，只有採用的建議會留下）。
 - 讓顧問在精靈階段也能建議答案數值（目前只回文字）。
 - 加入更多 micro-task templates，但仍維持每次只顯示一個。
 - 加入 mobile screenshot QA 自動化。
