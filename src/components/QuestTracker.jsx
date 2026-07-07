@@ -1,32 +1,132 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   buildStagePlan,
   getActiveStage,
   getTodayMicroTasks,
   toggleId,
   calculatePlanProgress,
+  isGoalComplete,
 } from '../models/stagePlanner.js';
 import { getCopy } from '../models/terminology.js';
+import AdvisorChat from './AdvisorChat.jsx';
+import {
+  buildGoalPrompt,
+  pickModelForStage,
+  MOCK_GOAL_REPLY,
+} from '../models/advisor.js';
+
+/**
+ * One goal (or sub-item) row: checkbox, its own "ask AI" chat that can
+ * break it into sub-items, and the recursive list of those sub-items.
+ */
+function GoalItem({
+  goal,
+  pathLabels,
+  stage,
+  profile,
+  breakdowns,
+  completedGoalIds,
+  openChatId,
+  onOpenChat,
+  onToggle,
+  onAddBreakdown,
+  apiKey,
+  usage,
+  onUsageChange,
+}) {
+  const children = breakdowns[goal.id] ?? [];
+  const hasChildren = children.length > 0;
+  const complete = isGoalComplete({ goalId: goal.id, completedGoalIds, breakdowns });
+  const chatOpen = openChatId === goal.id;
+
+  return (
+    <li>
+      <div className="goal-row">
+        <label className="goal-item">
+          <input
+            type="checkbox"
+            checked={complete}
+            disabled={hasChildren}
+            onChange={() => onToggle(goal.id)}
+          />
+          <span>{goal.label}</span>
+        </label>
+        <button
+          type="button"
+          className="mini"
+          onClick={() => onOpenChat(chatOpen ? null : goal.id)}
+        >
+          {chatOpen ? '收起' : '問 AI'}
+        </button>
+      </div>
+
+      {chatOpen && (
+        <AdvisorChat
+          key={goal.id}
+          apiKey={apiKey}
+          model={pickModelForStage(stage.id)}
+          systemPrompt={buildGoalPrompt({ profile, stage, goal, pathLabels })}
+          usage={usage}
+          onUsageChange={onUsageChange}
+          onAdoptSteps={(steps) => onAddBreakdown(goal.id, steps)}
+          mockReply={MOCK_GOAL_REPLY}
+          placeholder="例如:這個目標怎麼達成?我做不到怎麼辦?"
+        />
+      )}
+
+      {hasChildren && (
+        <ul className="goal-children">
+          {children.map((child) => (
+            <GoalItem
+              key={child.id}
+              goal={child}
+              pathLabels={[...pathLabels, goal.label]}
+              stage={stage}
+              profile={profile}
+              breakdowns={breakdowns}
+              completedGoalIds={completedGoalIds}
+              openChatId={openChatId}
+              onOpenChat={onOpenChat}
+              onToggle={onToggle}
+              onAddBreakdown={onAddBreakdown}
+              apiKey={apiKey}
+              usage={usage}
+              onUsageChange={onUsageChange}
+            />
+          ))}
+        </ul>
+      )}
+    </li>
+  );
+}
 
 export default function QuestTracker({
   mode,
   profile,
   customizations,
+  breakdowns,
   availableMinutes,
   completedGoalIds,
   completedTaskIds,
   onAvailableMinutesChange,
   onCompletedGoalIdsChange,
   onCompletedTaskIdsChange,
+  onAddBreakdown,
+  apiKey,
+  usage,
+  onUsageChange,
 }) {
+  const [openChatId, setOpenChatId] = useState(null);
+
   const plan = buildStagePlan({ profile, customizations });
-  const progress = calculatePlanProgress({ plan, completedGoalIds });
-  const activeStage = getActiveStage({ plan, completedGoalIds });
+  const progress = calculatePlanProgress({ plan, completedGoalIds, breakdowns });
+  const activeStage = getActiveStage({ plan, completedGoalIds, breakdowns });
   const todayTasks = getTodayMicroTasks({
     plan,
     completedGoalIds,
     completedTaskIds,
     availableMinutes,
+    breakdowns,
   });
   // One small win per day beats a backlog: show a single task.
   const todayTask = todayTasks[0] ?? null;
@@ -82,7 +182,7 @@ export default function QuestTracker({
         {plan.stages.map((stage, index) => {
           const isActive = stage.id === activeStage?.id;
           const done = stage.goals.every((goal) =>
-            completedGoalIds.includes(goal.id),
+            isGoalComplete({ goalId: goal.id, completedGoalIds, breakdowns }),
           );
           return (
             <li
@@ -99,20 +199,24 @@ export default function QuestTracker({
               {isActive && (
                 <ul className="stage-goals">
                   {stage.goals.map((goal) => (
-                    <li key={goal.id}>
-                      <label className="goal-item">
-                        <input
-                          type="checkbox"
-                          checked={completedGoalIds.includes(goal.id)}
-                          onChange={() =>
-                            onCompletedGoalIdsChange(
-                              toggleId(completedGoalIds, goal.id),
-                            )
-                          }
-                        />
-                        <span>{goal.label}</span>
-                      </label>
-                    </li>
+                    <GoalItem
+                      key={goal.id}
+                      goal={goal}
+                      pathLabels={[]}
+                      stage={stage}
+                      profile={profile}
+                      breakdowns={breakdowns}
+                      completedGoalIds={completedGoalIds}
+                      openChatId={openChatId}
+                      onOpenChat={setOpenChatId}
+                      onToggle={(goalId) =>
+                        onCompletedGoalIdsChange(toggleId(completedGoalIds, goalId))
+                      }
+                      onAddBreakdown={onAddBreakdown}
+                      apiKey={apiKey}
+                      usage={usage}
+                      onUsageChange={onUsageChange}
+                    />
                   ))}
                 </ul>
               )}
@@ -122,6 +226,7 @@ export default function QuestTracker({
       </ol>
       <p className="muted">
         {getCopy('stageGoals', mode)}
+        做不到的條件可以按「問 AI」，顧問會解釋並拆成更小的子項目。
       </p>
     </section>
   );

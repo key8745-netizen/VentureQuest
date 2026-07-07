@@ -24,6 +24,7 @@ function defaultState() {
     completedGoalIds: [],
     completedTaskIds: [],
     customizations: {},
+    breakdowns: {},
     advisorUsage: { date: '', count: 0 },
     orgTree: createStarterOrgTree(),
   };
@@ -69,6 +70,24 @@ function App() {
             ...existing,
             [kind]: [...(existing[kind] ?? []), { ...item, id }],
           },
+        },
+      };
+    });
+  };
+
+  // Attach advisor-suggested sub-items under a goal (or sub-item).
+  const addBreakdownItems = (parentId, steps) => {
+    setState((prev) => {
+      const stamp = Date.now();
+      const items = steps.map((step, index) => ({
+        id: `bd-${parentId}-${stamp}-${index}`,
+        label: step.label,
+      }));
+      return {
+        ...prev,
+        breakdowns: {
+          ...prev.breakdowns,
+          [parentId]: [...(prev.breakdowns[parentId] ?? []), ...items],
         },
       };
     });
@@ -162,12 +181,17 @@ function App() {
               mode={state.mode}
               profile={state.profile}
               customizations={state.customizations}
+              breakdowns={state.breakdowns}
               availableMinutes={state.availableMinutes}
               completedGoalIds={state.completedGoalIds}
               completedTaskIds={state.completedTaskIds}
               onAvailableMinutesChange={(availableMinutes) => patch({ availableMinutes })}
               onCompletedGoalIdsChange={(completedGoalIds) => patch({ completedGoalIds })}
               onCompletedTaskIdsChange={(completedTaskIds) => patch({ completedTaskIds })}
+              onAddBreakdown={addBreakdownItems}
+              apiKey={apiKey}
+              usage={state.advisorUsage}
+              onUsageChange={(advisorUsage) => patch({ advisorUsage })}
             />
             <AdvisorPanel
               apiKey={apiKey}
@@ -179,6 +203,7 @@ function App() {
                   customizations: state.customizations,
                 }),
                 completedGoalIds: state.completedGoalIds,
+                breakdowns: state.breakdowns,
               })}
               usage={state.advisorUsage}
               onUsageChange={(advisorUsage) => patch({ advisorUsage })}

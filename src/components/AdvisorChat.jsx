@@ -19,6 +19,8 @@ export default function AdvisorChat({
   onUsageChange,
   onAdoptTask,
   onAdoptGoal,
+  onAdoptSteps,
+  mockReply,
   placeholder,
 }) {
   const [history, setHistory] = useState([]);
@@ -46,6 +48,7 @@ export default function AdvisorChat({
         systemPrompt,
         history: history.filter((turn) => !turn.mock),
         question,
+        ...(mockReply ? { mockReply } : {}),
       });
       setHistory((prev) => [...prev, { question, ...result }]);
       setInput('');
@@ -75,6 +78,30 @@ export default function AdvisorChat({
         <div key={turnIndex} className="advisor-turn">
           <p className="advisor-question">{turn.question}</p>
           <p className="advisor-reply">{turn.reply}</p>
+          {turn.steps?.length > 0 && onAdoptSteps && (
+            <div className="advisor-steps">
+              <ul className="advisor-suggestions">
+                {turn.steps.map((step, i) => (
+                  <li key={`${turnIndex}-s${i}`}>
+                    <span>{i + 1}. {step.label}</span>
+                  </li>
+                ))}
+              </ul>
+              <button
+                type="button"
+                className="mini"
+                disabled={adopted.includes(`${turnIndex}-steps`)}
+                onClick={() => {
+                  onAdoptSteps(turn.steps);
+                  setAdopted((prev) => [...prev, `${turnIndex}-steps`]);
+                }}
+              >
+                {adopted.includes(`${turnIndex}-steps`)
+                  ? '已加入為子項目'
+                  : `把這 ${turn.steps.length} 步加入為子項目`}
+              </button>
+            </div>
+          )}
           {(turn.tasks?.length > 0 || turn.goals?.length > 0) && (
             <ul className="advisor-suggestions">
               {turn.tasks?.map((task, i) => {

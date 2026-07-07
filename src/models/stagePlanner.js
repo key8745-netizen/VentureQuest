@@ -133,15 +133,37 @@ export function buildStagePlan({ profile, customizations = {} }) {
   };
 }
 
-function isStageComplete(stage, completedGoalIds) {
-  return stage.goals.every((goal) => completedGoalIds.includes(goal.id));
+/**
+ * breakdowns: AI-suggested sub-items per goal (recursive), keyed by the
+ * parent id — { [goalOrItemId]: [{ id, label }, ...] }.
+ *
+ * A goal with sub-items completes only when every sub-item completes
+ * (checking the parent directly stops counting); leaves are checked by
+ * the user. This is what lets the advisor break a goal the user cannot
+ * do yet ("取得中餐丙級證照") into steps they can.
+ */
+export function isGoalComplete({ goalId, completedGoalIds, breakdowns = {} }) {
+  const children = breakdowns[goalId];
+  if (!children || children.length === 0) {
+    return completedGoalIds.includes(goalId);
+  }
+  return children.every((child) =>
+    isGoalComplete({ goalId: child.id, completedGoalIds, breakdowns }),
+  );
 }
 
-/** The first stage whose exit goals are not all checked yet. */
-export function getActiveStage({ plan, completedGoalIds }) {
+function isStageComplete(stage, completedGoalIds, breakdowns) {
+  return stage.goals.every((goal) =>
+    isGoalComplete({ goalId: goal.id, completedGoalIds, breakdowns }),
+  );
+}
+
+/** The first stage whose exit goals are not all complete yet. */
+export function getActiveStage({ plan, completedGoalIds, breakdowns = {} }) {
   return (
-    plan.stages.find((stage) => !isStageComplete(stage, completedGoalIds)) ??
-    null
+    plan.stages.find(
+      (stage) => !isStageComplete(stage, completedGoalIds, breakdowns),
+    ) ?? null
   );
 }
 
@@ -155,8 +177,9 @@ export function getTodayMicroTasks({
   completedGoalIds,
   completedTaskIds,
   availableMinutes,
+  breakdowns = {},
 }) {
-  const active = getActiveStage({ plan, completedGoalIds });
+  const active = getActiveStage({ plan, completedGoalIds, breakdowns });
   if (!active) return [];
 
   return active.tasks.filter(
@@ -174,10 +197,10 @@ export function toggleId(ids, id) {
 }
 
 /** Overall progress counts stage goals — they are the real milestones. */
-export function calculatePlanProgress({ plan, completedGoalIds }) {
+export function calculatePlanProgress({ plan, completedGoalIds, breakdowns = {} }) {
   const allGoals = plan.stages.flatMap((stage) => stage.goals);
   const completedCount = allGoals.filter((goal) =>
-    completedGoalIds.includes(goal.id),
+    isGoalComplete({ goalId: goal.id, completedGoalIds, breakdowns }),
   ).length;
 
   return {
