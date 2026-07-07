@@ -70,7 +70,7 @@ export default function OnboardingWizard({
     const survival = calculateSurvivalLine(profile);
     const pace = suggestAfterWorkPace({
       weeklyHours: profile.weeklyHours,
-      weeklyUnits: 0,
+      weeklyUnits: 1,
     });
 
     return (
@@ -84,7 +84,7 @@ export default function OnboardingWizard({
               ? `生死線：每月至少賣 ${survival.unitsToSurvive} 個單位，賣一個留下 ${survival.unitMargin} 元。`
               : '注意：現在的價格賣一個賠一個，第一階段就會帶你調整它。'}
           </li>
-          <li>每週可投入 {profile.weeklyHours} 小時。{pace.burnoutRisk ? '這已經偏多，小心過勞。' : '這個節奏可以持續。'}</li>
+          <li>每週可投入 {profile.weeklyHours} 小時。{pace.risk === 'burnout-risk' ? '這已經偏多，小心過勞。' : '這個節奏可以持續。'}</li>
           <li>你的起點：第 1 階段「{plan.stages[0].label}」——{plan.stages[0].subtitle}。</li>
           <li>每天只會給你一件 5–30 分鐘的小事，完成階段目標就往下一階段。</li>
         </ul>

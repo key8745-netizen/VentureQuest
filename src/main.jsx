@@ -6,6 +6,7 @@ import QuestTracker from './components/QuestTracker.jsx';
 import OrgTreePreview from './components/OrgTreePreview.jsx';
 import OnboardingWizard from './components/OnboardingWizard.jsx';
 import AdvisorPanel from './components/AdvisorPanel.jsx';
+import WeeklyReview from './components/WeeklyReview.jsx';
 import { createStarterOrgTree } from './models/orgTree.js';
 import {
   buildStagePlan,
@@ -32,6 +33,7 @@ function defaultState() {
     customizations: {},
     breakdowns: {},
     celebratedStageIds: [],
+    weeklyReviews: [],
     advisorUsage: { date: '', count: 0 },
     advisorHistories: {},
     orgTree: createStarterOrgTree(),
@@ -285,6 +287,7 @@ function App() {
               onCompletedTaskIdsChange={(completedTaskIds) => patch({ completedTaskIds })}
               onAddBreakdown={addBreakdownItems}
               onRemoveItem={handleRemoveItem}
+              onAdoptTask={(stageId, task) => addCustomization(stageId, 'tasks', task)}
               apiKey={apiKey}
               usage={state.advisorUsage}
               onUsageChange={(advisorUsage) => patch({ advisorUsage })}
@@ -307,9 +310,16 @@ function App() {
               advisorHistories={state.advisorHistories}
               onAdvisorHistoryChange={setAdvisorHistory}
             />
+            <WeeklyReview
+              mode={state.mode}
+              financial={state.financial}
+              reviews={state.weeklyReviews}
+              onReviewsChange={(weeklyReviews) => patch({ weeklyReviews })}
+            />
             <FinancialPanel
               mode={state.mode}
               financial={state.financial}
+              targetMonthlyIncome={state.profile.targetMonthlyIncome}
               onChange={(financial) => patch({ financial })}
             />
             <OrgTreePreview

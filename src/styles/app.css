@@ -483,6 +483,16 @@ button.mini {
   margin: 6px 0 0;
 }
 
+.review-history {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+}
+
+.review-history li {
+  padding: 2px 0;
+}
+
 .stage-clear-overlay {
   position: fixed;
   inset: 0;

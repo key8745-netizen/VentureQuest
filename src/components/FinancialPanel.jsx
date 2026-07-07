@@ -1,5 +1,8 @@
 import React from 'react';
-import { calculateSurvivalLine } from '../models/financialGuardrails.js';
+import {
+  calculateSurvivalLine,
+  calculateTargetLine,
+} from '../models/financialGuardrails.js';
 import { getCopy } from '../models/terminology.js';
 
 function NumberField({ label, value, onChange }) {
@@ -16,9 +19,20 @@ function NumberField({ label, value, onChange }) {
   );
 }
 
-export default function FinancialPanel({ mode, financial, onChange }) {
+export default function FinancialPanel({
+  mode,
+  financial,
+  targetMonthlyIncome,
+  onChange,
+}) {
   const { monthlyFixedCost, unitPrice, unitCost } = financial;
   const survival = calculateSurvivalLine({ monthlyFixedCost, unitPrice, unitCost });
+  const target = calculateTargetLine({
+    monthlyFixedCost,
+    unitPrice,
+    unitCost,
+    targetMonthlyIncome,
+  });
 
   const setField = (key) => (value) => onChange({ ...financial, [key]: value });
 
@@ -52,6 +66,12 @@ export default function FinancialPanel({ mode, financial, onChange }) {
           <p className="big-number">
             每月 <strong>{survival.unitsToSurvive}</strong> 個單位
           </p>
+          {target.viable && targetMonthlyIncome > 0 && (
+            <p>
+              {getCopy('targetLine', mode)}（{targetMonthlyIncome} 元）：
+              每月 <strong>{target.unitsToTarget}</strong> 個單位
+            </p>
+          )}
         </div>
       ) : (
         <div className="verdict verdict-danger">

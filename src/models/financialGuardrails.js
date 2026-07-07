@@ -30,6 +30,27 @@ export function calculateSurvivalLine({ monthlyFixedCost, unitPrice, unitCost })
 }
 
 /**
+ * Units per month needed to hit the income target on top of covering
+ * the fixed costs — the survival line's ambitious sibling.
+ */
+export function calculateTargetLine({
+  monthlyFixedCost,
+  unitPrice,
+  unitCost,
+  targetMonthlyIncome,
+}) {
+  const survival = calculateSurvivalLine({ monthlyFixedCost, unitPrice, unitCost });
+  if (!survival.viable) {
+    return { viable: false, unitsToTarget: null };
+  }
+  const income = Math.max(0, targetMonthlyIncome ?? 0);
+  return {
+    viable: true,
+    unitsToTarget: Math.ceil((monthlyFixedCost + income) / survival.unitMargin),
+  };
+}
+
+/**
  * A conservative weekly pace for someone still employed full-time.
  * Takes the pace the user *wants* (weeklyUnits within weeklyHours of
  * spare time) and scales it down so there is slack left over.

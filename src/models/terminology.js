@@ -67,6 +67,14 @@ const COPY = {
     pro: '需要協助?諮詢 AI',
     plain: '不知道怎麼填?問 AI',
   },
+  targetLine: {
+    pro: '目標收入所需單量',
+    plain: '要賺到目標收入,每月要賣幾個',
+  },
+  weeklyReview: {
+    pro: '每週營運回顧',
+    plain: '每週回顧:這週跑得怎樣?',
+  },
   stageClearTitle: {
     pro: '階段完成',
     plain: '過關啦!',
