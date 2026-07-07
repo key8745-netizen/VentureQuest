@@ -11,6 +11,7 @@ import { getCopy } from '../models/terminology.js';
 export default function QuestTracker({
   mode,
   profile,
+  customizations,
   availableMinutes,
   completedGoalIds,
   completedTaskIds,
@@ -18,7 +19,7 @@ export default function QuestTracker({
   onCompletedGoalIdsChange,
   onCompletedTaskIdsChange,
 }) {
-  const plan = buildStagePlan({ profile });
+  const plan = buildStagePlan({ profile, customizations });
   const progress = calculatePlanProgress({ plan, completedGoalIds });
   const activeStage = getActiveStage({ plan, completedGoalIds });
   const todayTasks = getTodayMicroTasks({

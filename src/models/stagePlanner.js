@@ -102,7 +102,11 @@ const STAGE_TEMPLATES = [
   },
 ];
 
-export function buildStagePlan({ profile }) {
+/**
+ * customizations: advisor-suggested extras the user adopted, keyed by
+ * stage id — { [stageId]: { goals: [...], tasks: [...] } }.
+ */
+export function buildStagePlan({ profile, customizations = {} }) {
   const income = profile.targetMonthlyIncome;
   const incomePart = Number.isFinite(income) && income > 0 ? `每月 ${income}` : '';
 
@@ -112,11 +116,20 @@ export function buildStagePlan({ profile }) {
 
   return {
     targetLabel,
-    stages: STAGE_TEMPLATES.map((stage) => ({
-      ...stage,
-      goals: stage.goals.map((goal) => ({ ...goal })),
-      tasks: stage.tasks.map((task) => ({ ...task })),
-    })),
+    stages: STAGE_TEMPLATES.map((stage) => {
+      const extra = customizations[stage.id] ?? {};
+      return {
+        ...stage,
+        goals: [
+          ...stage.goals.map((goal) => ({ ...goal })),
+          ...(extra.goals ?? []).map((goal) => ({ ...goal })),
+        ],
+        tasks: [
+          ...stage.tasks.map((task) => ({ ...task })),
+          ...(extra.tasks ?? []).map((task) => ({ ...task })),
+        ],
+      };
+    }),
   };
 }
 

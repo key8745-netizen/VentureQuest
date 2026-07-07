@@ -290,6 +290,94 @@ button.mini {
   margin: 6px 0;
 }
 
+.advisor-chat {
+  margin-top: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
+.advisor-turn {
+  margin-bottom: 10px;
+}
+
+.advisor-question {
+  margin: 0 0 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.advisor-question::before {
+  content: '你:';
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.advisor-reply {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--bg);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  white-space: pre-wrap;
+}
+
+.advisor-suggestions {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0;
+}
+
+.advisor-suggestions li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  border: 1px dashed var(--accent);
+  border-radius: 8px;
+  background: var(--accent-soft);
+  font-size: 0.85rem;
+}
+
+.advisor-suggestions em {
+  font-style: normal;
+  color: var(--muted);
+  margin-left: 4px;
+}
+
+.advisor-error {
+  color: var(--danger);
+  font-size: 0.85rem;
+}
+
+.advisor-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.advisor-input-row input {
+  flex: 1;
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.advisor-input-row input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.advisor-key-form input {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  width: 60%;
+  margin-right: 8px;
+}
+
 .micro-task {
   display: flex;
   gap: 10px;

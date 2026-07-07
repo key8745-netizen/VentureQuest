@@ -50,6 +50,32 @@ test('uses a generic target label when the user is still exploring', () => {
   assert.ok(!plan.targetLabel.includes('便當'));
 });
 
+test('merges advisor customizations into the matching stage', () => {
+  const customizations = {
+    explore: {
+      tasks: [{ id: 'custom-t1', label: '查 3 間店的價格', minutes: 15 }],
+      goals: [{ id: 'custom-g1', label: '拿到 1 筆預購訂單' }],
+    },
+  };
+  const plan = buildStagePlan({ profile, customizations });
+
+  const explore = plan.stages[0];
+  assert.ok(explore.tasks.some((task) => task.id === 'custom-t1'));
+  assert.ok(explore.goals.some((goal) => goal.id === 'custom-g1'));
+
+  // Other stages are untouched.
+  const prepare = plan.stages[1];
+  assert.ok(!prepare.tasks.some((task) => task.id.startsWith('custom-')));
+
+  // Custom goals count toward stage completion.
+  const goalIds = explore.goals.map((goal) => goal.id);
+  let completedGoalIds = [];
+  for (const goalId of goalIds) {
+    completedGoalIds = toggleId(completedGoalIds, goalId);
+  }
+  assert.equal(getActiveStage({ plan, completedGoalIds }).id, 'prepare');
+});
+
 test('a stage completes only when all its goals are checked', () => {
   const plan = buildStagePlan({ profile });
   const exploreGoalIds = plan.stages[0].goals.map((goal) => goal.id);
