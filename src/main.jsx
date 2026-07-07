@@ -208,6 +208,7 @@ function App() {
               onAdvisorHistoryChange={setAdvisorHistory}
             />
             <AdvisorPanel
+              mode={state.mode}
               apiKey={apiKey}
               onApiKeyChange={setApiKey}
               profile={state.profile}
@@ -242,6 +243,7 @@ function App() {
           </>
         ) : (
           <OnboardingWizard
+            mode={state.mode}
             onComplete={handleOnboardingComplete}
             apiKey={apiKey}
             usage={state.advisorUsage}

@@ -4,7 +4,18 @@ import assert from 'node:assert/strict';
 import { modes, getCopy } from '../src/models/terminology.js';
 
 test('switches key labels between professional and plain language', () => {
-  for (const key of ['survivalLine', 'unitMargin', 'todayMicroTask']) {
+  const keys = [
+    'survivalLine',
+    'unitMargin',
+    'todayMicroTask',
+    // Advisor-era UI copy must switch too.
+    'askAi',
+    'todayMinutes',
+    'stageGoalsHint',
+    'advisorTitle',
+    'wizardAskAi',
+  ];
+  for (const key of keys) {
     const pro = getCopy(key, modes.PRO);
     const plain = getCopy(key, modes.PLAIN);
 

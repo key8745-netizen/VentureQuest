@@ -228,7 +228,7 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 - 五階段路線圖：階段結構、目標全勾才解鎖下一階段、今日 micro-task 篩選、顧問建議合併、進度計算、拆解子項目的遞迴完成與階段解鎖。
 - AI 顧問：模型分級、提示詞內容、回覆解析（JSON／純文字／code fence）、建議 clamp、每日上限與跨日重置、對話歷史裁剪與 API 上下文組裝（排除 mock、限最近 6 輪）。
 - Org-Tree：產業無感節點、子樹複製、管理節點解鎖。
-- 文案模式切換與 fallback。
+- 文案模式切換與 fallback（含顧問時代新增的 UI 詞條）。
 
 執行：
 
@@ -263,6 +263,7 @@ npm test
 - [x] 更多 micro-task 模板（prepare +2、operate/grow/scale 各 +1）。
 - [x] Mobile screenshot QA 自動化（`npm run qa:mobile`）。
 - [x] 顧問提示詞帶即時財務數字與過關條件完成狀態。
+- [x] 白話／專業切換覆蓋顧問、精靈、拆解等新 UI。
 
 ### P2
 

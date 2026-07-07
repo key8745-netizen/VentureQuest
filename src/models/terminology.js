@@ -47,6 +47,26 @@ const COPY = {
     pro: '今日可用時間不足以執行任何項目，請調整可用分鐘數。',
     plain: '今天時間太少塞不下任務，休息也是策略，明天再來。',
   },
+  askAi: {
+    pro: '諮詢 AI',
+    plain: '問 AI',
+  },
+  todayMinutes: {
+    pro: '今日可投入分鐘數',
+    plain: '今天可用分鐘數',
+  },
+  stageGoalsHint: {
+    pro: '完成本階段全部條件後自動進入下一階段;無法執行的條件可透過「諮詢 AI」由顧問拆解為子項目。',
+    plain: '把這一關的條件都打勾，就會自動進下一關。做不到的就按「問 AI」，顧問會幫你拆成更小的子項目。',
+  },
+  advisorTitle: {
+    pro: 'AI 營運顧問',
+    plain: 'AI 創業顧問',
+  },
+  wizardAskAi: {
+    pro: '需要協助?諮詢 AI',
+    plain: '不知道怎麼填?問 AI',
+  },
   stageMap: {
     pro: '五階段營運路線圖',
     plain: '你的闖關地圖',

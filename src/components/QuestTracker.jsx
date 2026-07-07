@@ -20,6 +20,7 @@ import {
  * break it into sub-items, and the recursive list of those sub-items.
  */
 function GoalItem({
+  mode,
   goal,
   pathLabels,
   stage,
@@ -59,7 +60,7 @@ function GoalItem({
           className="mini"
           onClick={() => onOpenChat(chatOpen ? null : goal.id)}
         >
-          {chatOpen ? '收起' : '問 AI'}
+          {chatOpen ? '收起' : getCopy('askAi', mode)}
         </button>
       </div>
 
@@ -84,6 +85,7 @@ function GoalItem({
           {children.map((child) => (
             <GoalItem
               key={child.id}
+              mode={mode}
               goal={child}
               pathLabels={[...pathLabels, goal.label]}
               stage={stage}
@@ -149,7 +151,7 @@ export default function QuestTracker({
 
       <div className="field-grid">
         <label className="field">
-          <span>今天可用分鐘數</span>
+          <span>{getCopy('todayMinutes', mode)}</span>
           <input
             type="number"
             min="0"
@@ -212,6 +214,7 @@ export default function QuestTracker({
                   {stage.goals.map((goal) => (
                     <GoalItem
                       key={goal.id}
+                      mode={mode}
                       goal={goal}
                       pathLabels={[]}
                       stage={stage}
@@ -238,10 +241,7 @@ export default function QuestTracker({
           );
         })}
       </ol>
-      <p className="muted">
-        {getCopy('stageGoals', mode)}
-        做不到的條件可以按「問 AI」，顧問會解釋並拆成更小的子項目。
-      </p>
+      <p className="muted">{getCopy('stageGoalsHint', mode)}</p>
     </section>
   );
 }
