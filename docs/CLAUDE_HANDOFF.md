@@ -189,7 +189,7 @@ App shell 與跨區塊狀態：
 AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
 - `pickModelForStage(stageId)`：Haiku / Sonnet / Opus 分級。
-- `buildStagePrompt` / `buildQuestionPrompt` / `buildGoalPrompt`：系統提示詞（goal 版帶父項目路徑,回覆可含 steps 拆解）。
+- `buildStagePrompt` / `buildQuestionPrompt` / `buildGoalPrompt`：系統提示詞。stage/goal 版吃財務面板的即時數字（蓋過精靈快照），stage 版並附每個過關條件的完成狀態（含拆解進度），明確要求不重複建議已完成的事。
 - `parseAdvisorReply(text)`：解析 JSON 回覆，clamp：最多 3 任務（5–30 分鐘）、2 目標、5 個拆解步驟；answer 只接受非負數字或 80 字內字串。
 - `canAskToday` / `recordCall` / `DAILY_CALL_LIMIT`：每日呼叫上限。
 - `capHistory` / `buildMessages`：每個對話最多存 10 輪；呼叫 API 只帶最近 6 輪真實對話（mock 不算）。
@@ -221,7 +221,7 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
 ## 5. 測試狀態
 
-目前測試覆蓋（31/31 pass）：
+目前測試覆蓋（33/33 pass）：
 
 - 財務生死線、虧錢模型拒絕、在職節奏風險判斷。
 - 引導問答：題目順序、答案驗證、profile 產生（含探索分支與 schema 檢查）。
@@ -262,6 +262,7 @@ npm test
 - [x] 精靈問答的 AI 建議答案一鍵填入。
 - [x] 更多 micro-task 模板（prepare +2、operate/grow/scale 各 +1）。
 - [x] Mobile screenshot QA 自動化（`npm run qa:mobile`）。
+- [x] 顧問提示詞帶即時財務數字與過關條件完成狀態。
 
 ### P2
 

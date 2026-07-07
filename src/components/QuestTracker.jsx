@@ -24,6 +24,7 @@ function GoalItem({
   pathLabels,
   stage,
   profile,
+  financial,
   breakdowns,
   completedGoalIds,
   openChatId,
@@ -67,7 +68,7 @@ function GoalItem({
           key={goal.id}
           apiKey={apiKey}
           model={pickModelForStage(stage.id)}
-          systemPrompt={buildGoalPrompt({ profile, stage, goal, pathLabels })}
+          systemPrompt={buildGoalPrompt({ profile, stage, goal, pathLabels, financial })}
           history={advisorHistories[`goal:${goal.id}`] ?? []}
           onHistoryChange={(turns) => onAdvisorHistoryChange(`goal:${goal.id}`, turns)}
           usage={usage}
@@ -87,6 +88,7 @@ function GoalItem({
               pathLabels={[...pathLabels, goal.label]}
               stage={stage}
               profile={profile}
+              financial={financial}
               breakdowns={breakdowns}
               completedGoalIds={completedGoalIds}
               openChatId={openChatId}
@@ -109,6 +111,7 @@ function GoalItem({
 export default function QuestTracker({
   mode,
   profile,
+  financial,
   customizations,
   breakdowns,
   availableMinutes,
@@ -213,6 +216,7 @@ export default function QuestTracker({
                       pathLabels={[]}
                       stage={stage}
                       profile={profile}
+                      financial={financial}
                       breakdowns={breakdowns}
                       completedGoalIds={completedGoalIds}
                       openChatId={openChatId}

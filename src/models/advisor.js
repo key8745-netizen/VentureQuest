@@ -9,6 +9,7 @@
 //   - without an API key the app falls back to a canned mock reply
 
 import Anthropic from '@anthropic-ai/sdk';
+import { isGoalComplete } from './stagePlanner.js';
 
 export const DAILY_CALL_LIMIT = 20;
 export const MAX_REPLY_TOKENS = 1024;
@@ -31,22 +32,51 @@ export function pickModelForStage(stageId) {
   return STAGE_MODELS[stageId] ?? CHEAPEST_MODEL;
 }
 
-function describeProfile(profile) {
+// financial (optional) carries the live numbers from the financial
+// panel — they win over the wizard-time snapshot in the profile.
+function describeProfile(profile, financial) {
   const idea = profile.idea || '還在探索方向';
+  const fixed = financial?.monthlyFixedCost ?? profile.monthlyFixedCost;
+  const price = financial?.unitPrice ?? profile.unitPrice;
+  const cost = financial?.unitCost ?? profile.unitCost;
   return [
     `事業方向:「${idea}」。`,
-    `每月固定成本 ${profile.monthlyFixedCost} 元、單位售價 ${profile.unitPrice} 元、單位變動成本 ${profile.unitCost} 元。`,
+    `每月固定成本 ${fixed} 元、單位售價 ${price} 元、單位變動成本 ${cost} 元。`,
     `每週可投入 ${profile.weeklyHours} 小時,目標月收入 ${profile.targetMonthlyIncome} 元。`,
   ].join('\n');
 }
 
+/** One line per goal so the advisor never repeats finished work. */
+function describeGoalStatus(stage, completedGoalIds, breakdowns) {
+  return stage.goals
+    .map((goal) => {
+      const children = breakdowns[goal.id] ?? [];
+      if (children.length > 0) {
+        const doneCount = children.filter((child) =>
+          isGoalComplete({ goalId: child.id, completedGoalIds, breakdowns }),
+        ).length;
+        return `${goal.label}(已拆成 ${children.length} 個子項目,完成 ${doneCount} 個)`;
+      }
+      const done = isGoalComplete({ goalId: goal.id, completedGoalIds, breakdowns });
+      return `${goal.label}(${done ? '已完成' : '未完成'})`;
+    })
+    .join(';');
+}
+
 /** System prompt for the dashboard stage advisor (may suggest tasks/goals). */
-export function buildStagePrompt({ profile, stage }) {
+export function buildStagePrompt({
+  profile,
+  stage,
+  financial,
+  completedGoalIds = [],
+  breakdowns = {},
+}) {
   return [
     '你是 VentureQuest 的創業顧問,幫還在上班的新手推進副業。',
-    describeProfile(profile),
+    describeProfile(profile, financial),
     `使用者目前在第「${stage.label}」階段(${stage.subtitle})。`,
-    `這階段的過關條件:${stage.goals.map((goal) => goal.label).join(';')}。`,
+    `這階段的過關條件與目前狀態:${describeGoalStatus(stage, completedGoalIds, breakdowns)}。`,
+    '不要重複建議已完成的事,優先幫使用者推進未完成的條件。',
     '',
     '回答規則:',
     '1. 繁體中文,直接務實,回覆不超過 200 字。',
@@ -61,11 +91,11 @@ export function buildStagePrompt({ profile, stage }) {
  * System prompt for breaking down one stage goal (or one of its
  * sub-items) the user does not know how to achieve.
  */
-export function buildGoalPrompt({ profile, stage, goal, pathLabels = [] }) {
+export function buildGoalPrompt({ profile, stage, goal, pathLabels = [], financial }) {
   const path = pathLabels.length > 0 ? `(它是「${pathLabels.join(' > ')}」的子項目)` : '';
   return [
     '你是 VentureQuest 的創業顧問,幫還在上班的新手推進副業。',
-    describeProfile(profile),
+    describeProfile(profile, financial),
     `使用者目前在第「${stage.label}」階段(${stage.subtitle})。`,
     `使用者不知道怎麼達成這個目標:「${goal.label}」${path}。`,
     '',

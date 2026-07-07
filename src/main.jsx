@@ -191,6 +191,7 @@ function App() {
             <QuestTracker
               mode={state.mode}
               profile={state.profile}
+              financial={state.financial}
               customizations={state.customizations}
               breakdowns={state.breakdowns}
               availableMinutes={state.availableMinutes}
@@ -210,6 +211,9 @@ function App() {
               apiKey={apiKey}
               onApiKeyChange={setApiKey}
               profile={state.profile}
+              financial={state.financial}
+              completedGoalIds={state.completedGoalIds}
+              breakdowns={state.breakdowns}
               activeStage={getActiveStage({
                 plan: buildStagePlan({
                   profile: state.profile,

@@ -53,6 +53,44 @@ test('stage prompt carries the user context and the JSON contract', () => {
   assert.ok(prompt.includes('"tasks"'));
 });
 
+test('stage prompt prefers live financial numbers and shows goal status', () => {
+  const richStage = {
+    ...stage,
+    goals: [
+      { id: 'g-done', label: '已完成的目標' },
+      { id: 'g-open', label: '還沒完成的目標' },
+      { id: 'g-split', label: '拆解中的目標' },
+    ],
+  };
+  const prompt = buildStagePrompt({
+    profile,
+    stage: richStage,
+    financial: { monthlyFixedCost: 35000, unitPrice: 150, unitCost: 60 },
+    completedGoalIds: ['g-done', 'sub-1'],
+    breakdowns: { 'g-split': [{ id: 'sub-1', label: 'a' }, { id: 'sub-2', label: 'b' }] },
+  });
+
+  // Live numbers from the financial panel win over the wizard profile.
+  assert.ok(prompt.includes('35000'));
+  assert.ok(prompt.includes('150'));
+  assert.ok(!prompt.includes('每月固定成本 30000'));
+
+  // Goal status is spelled out so the advisor never repeats done work.
+  assert.ok(prompt.includes('已完成的目標(已完成)'));
+  assert.ok(prompt.includes('還沒完成的目標(未完成)'));
+  assert.ok(prompt.includes('拆解中的目標(已拆成 2 個子項目,完成 1 個)'));
+});
+
+test('goal prompt also uses live financial numbers when provided', () => {
+  const prompt = buildGoalPrompt({
+    profile,
+    stage,
+    goal: { id: 'x', label: 'y' },
+    financial: { monthlyFixedCost: 99999, unitPrice: 150, unitCost: 60 },
+  });
+  assert.ok(prompt.includes('99999'));
+});
+
 test('question prompt includes the wizard question and the answer contract', () => {
   const prompt = buildQuestionPrompt({
     question: '賣一個收多少錢?',

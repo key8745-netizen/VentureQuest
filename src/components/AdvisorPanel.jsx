@@ -16,7 +16,10 @@ export default function AdvisorPanel({
   apiKey,
   onApiKeyChange,
   profile,
+  financial,
   activeStage,
+  completedGoalIds,
+  breakdowns,
   usage,
   onUsageChange,
   onAdoptTask,
@@ -37,7 +40,13 @@ export default function AdvisorPanel({
   }
 
   const model = pickModelForStage(activeStage.id);
-  const systemPrompt = buildStagePrompt({ profile, stage: activeStage });
+  const systemPrompt = buildStagePrompt({
+    profile,
+    stage: activeStage,
+    financial,
+    completedGoalIds,
+    breakdowns,
+  });
 
   return (
     <section className="card">
