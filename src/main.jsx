@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import FinancialPanel from './components/FinancialPanel.jsx';
@@ -33,6 +33,7 @@ function loadState() {
 
 function App() {
   const [state, setState] = useState(loadState);
+  const importRef = useRef(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -44,6 +45,22 @@ function App() {
     if (!window.confirm('確定要清除所有本機資料，回到初始狀態嗎？')) return;
     localStorage.removeItem(STORAGE_KEY);
     setState(defaultState());
+  };
+
+  const handleImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        setState({ ...defaultState(), ...parsed });
+      } catch {
+        alert('無法讀取檔案，請確認是合法的 VentureQuest JSON。');
+      }
+    };
+    reader.readAsText(file);
   };
 
   const handleExport = () => {
@@ -77,6 +94,16 @@ function App() {
           <button type="button" onClick={handleExport}>
             Export JSON
           </button>
+          <button type="button" onClick={() => importRef.current.click()}>
+            Import JSON
+          </button>
+          <input
+            ref={importRef}
+            type="file"
+            accept=".json,application/json"
+            style={{ display: 'none' }}
+            onChange={handleImport}
+          />
           <button type="button" className="danger" onClick={handleReset}>
             Reset local data
           </button>
