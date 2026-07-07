@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { Component, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import FinancialPanel from './components/FinancialPanel.jsx';
@@ -40,18 +40,80 @@ function defaultState() {
   };
 }
 
+/**
+ * Merges saved state over the defaults, but only accepts values whose
+ * shape matches — a corrupted or hand-edited entry falls back to the
+ * default for that key instead of crashing the whole app.
+ */
 function loadState() {
+  const defaults = defaultState();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultState();
-    return { ...defaultState(), ...JSON.parse(raw) };
+    if (!raw) return defaults;
+    const parsed = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return defaults;
+
+    const merged = { ...defaults };
+    for (const [key, fallback] of Object.entries(defaults)) {
+      const value = parsed[key];
+      if (value === undefined) continue;
+      if (Array.isArray(fallback) ? Array.isArray(value) : true) {
+        merged[key] = value;
+      }
+    }
+    if (parsed.profile === null || typeof parsed.profile === 'object') {
+      merged.profile = parsed.profile ?? null;
+    }
+    return merged;
   } catch {
-    return defaultState();
+    return defaults;
+  }
+}
+
+/** Last line of defense: a render crash offers reset instead of a blank page. */
+class AppErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div className="app">
+        <section className="card">
+          <h2>出了點狀況</h2>
+          <p className="muted">
+            畫面渲染失敗，可能是本機資料損壞。你可以重新整理再試，或清除資料重新開始（資料只存在這個瀏覽器）。
+          </p>
+          <div className="wizard-actions">
+            <button type="button" onClick={() => window.location.reload()}>
+              重新整理
+            </button>
+            <button
+              type="button"
+              className="danger"
+              onClick={() => {
+                localStorage.removeItem(STORAGE_KEY);
+                window.location.reload();
+              }}
+            >
+              清除資料重新開始
+            </button>
+          </div>
+        </section>
+      </div>
+    );
   }
 }
 
 function App() {
   const [state, setState] = useState(loadState);
+  const [editingProfile, setEditingProfile] = useState(false);
   const [apiKey, setApiKey] = useState(
     () => localStorage.getItem(API_KEY_STORAGE) ?? '',
   );
@@ -145,6 +207,7 @@ function App() {
         unitCost: profile.unitCost,
       },
     });
+    setEditingProfile(false);
   };
 
   const handleReset = () => {
@@ -205,7 +268,7 @@ function App() {
 
   return (
     <div className="app">
-      {clearedStage && (
+      {clearedStage && !editingProfile && (
         <div className="stage-clear-overlay" role="dialog" aria-modal="true">
           <div className="stage-clear card">
             <p className="stage-clear-emoji">🎉</p>
@@ -251,6 +314,11 @@ function App() {
           >
             {state.mode === modes.PRO ? '切換成白話' : '切換成專業'}
           </button>
+          {state.profile && (
+            <button type="button" onClick={() => setEditingProfile(true)}>
+              修改目標
+            </button>
+          )}
           <button type="button" onClick={handleExport}>
             Export JSON
           </button>
@@ -271,7 +339,7 @@ function App() {
       </header>
 
       <main>
-        {state.profile ? (
+        {state.profile && !editingProfile ? (
           <>
             <QuestTracker
               mode={state.mode}
@@ -332,6 +400,8 @@ function App() {
           <OnboardingWizard
             mode={state.mode}
             onComplete={handleOnboardingComplete}
+            onCancel={editingProfile ? () => setEditingProfile(false) : undefined}
+            initialAnswers={editingProfile ? state.profile : undefined}
             apiKey={apiKey}
             usage={state.advisorUsage}
             onUsageChange={(advisorUsage) => patch({ advisorUsage })}
@@ -348,4 +418,8 @@ function App() {
   );
 }
 
-createRoot(document.getElementById('root')).render(<App />);
+createRoot(document.getElementById('root')).render(
+  <AppErrorBoundary>
+    <App />
+  </AppErrorBoundary>,
+);
