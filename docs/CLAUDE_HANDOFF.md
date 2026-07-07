@@ -10,13 +10,15 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 
 - React single-page MVP。
 - `localStorage` 暫存，不做登入。
-- 無後端、無資料庫、無 AI API。
+- 無後端、無資料庫。
+- 引導式問答（onboarding wizard）：一次一題，答完產生計畫；每題可問 AI。
+- 五階段路線圖：探索驗證 → 起飛準備 → 落地營運 → 穩定成長 → 規模擴張。每階段有可勾選的過關條件（goals）＋ 5–30 分鐘 micro-tasks。
+- AI 創業顧問：使用者自備 Anthropic API key（存瀏覽器獨立 key，不隨 Export 匯出），依階段分級選模型（explore/prepare → Haiku、operate/grow → Sonnet、scale → Opus）。顧問可建議新任務／過關條件，使用者按「加入」採用。
+- AI 成本防護欄（已寫死在 `advisor.js`）：每日 20 次呼叫上限、單次回覆 1024 tokens、無 key 時 fallback 到寫死的 mock 回覆。
 - 專業術語 / 街頭白話切換。
 - 財務生死線：每月固定成本、單位售價、單位變動成本、最低單量。
-- 長期目標拆解：Spark → Runway → Architect → Nexus。
 - 今日 micro-task：依照今天可用分鐘數，只顯示一個可以做的小任務。
-- Quest progress bar。
-- 產業無感 schema：底層只用 `productId`、單位經濟、抽象 operating nodes。
+- 產業無感 schema：底層只用 `productId`、單位經濟、抽象 operating nodes；使用者的產業只存在 `profile.idea` 這個字串。
 - 最小 Org-Tree：可複製節點、解鎖管理節點。
 
 ### 暫時不要做
@@ -27,7 +29,8 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 - 不要加金流。
 - 不要加大型狀態管理庫。
 - 不要加複雜 graph canvas。
-- 不要串 AI API，除非先有 token/cost guardrail。
+- 不要移除或放寬 AI 成本防護欄（每日上限、token 上限、mock fallback）。
+- 不要把 API key 放進可 Export 的 app state（它存在獨立的 `venturequest:apikey:v1`）。
 - 不要把任何產業詞寫進底層 schema，例如 `foodCost`、`menuItem`、`roomNight`。
 
 ## 1.5 佈署狀態
@@ -66,6 +69,7 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 - Module format: ESM。
 - Tests: Node built-in test runner。
 - Package manager: npm（版本已固定，不用 `latest`）。
+- AI SDK: `@anthropic-ai/sdk`（瀏覽器直連，`dangerouslyAllowBrowser: true`，key 由使用者提供）。
 - Entry: `src/main.jsx`。
 - Styles: `src/styles/app.css`。
 
@@ -98,17 +102,25 @@ npm install
 index.html
 package.json
 vite.config.js
+netlify.toml
 src/main.jsx
-src/components/FinancialPanel.jsx
+src/components/OnboardingWizard.jsx
 src/components/QuestTracker.jsx
+src/components/AdvisorPanel.jsx
+src/components/AdvisorChat.jsx
+src/components/FinancialPanel.jsx
 src/components/OrgTreePreview.jsx
+src/models/onboarding.js
+src/models/stagePlanner.js
+src/models/advisor.js
 src/models/financialGuardrails.js
-src/models/goalPlanner.js
 src/models/orgTree.js
 src/models/terminology.js
 src/styles/app.css
+test/onboarding.test.js
+test/stagePlanner.test.js
+test/advisor.test.js
 test/financialGuardrails.test.js
-test/goalPlanner.test.js
 test/orgTree.test.js
 test/terminology.test.js
 ```
@@ -117,15 +129,18 @@ test/terminology.test.js
 
 App shell 與跨區塊狀態：
 
-- `localStorage` 讀寫（key: `venturequest:v1`）。
-- 專業 / 白話模式切換。
-- `Reset local data` 按鈕（含 confirm）。
-- `Export JSON` 按鈕（下載目前 prototype 狀態）。
+- `localStorage` 讀寫（app state key: `venturequest:v1`；API key 獨立存 `venturequest:apikey:v1`）。
+- 沒有 `profile` 時顯示 OnboardingWizard，答完才進儀表板。
+- `customizations`：使用者採用的顧問建議（per-stage 額外 goals/tasks）。
+- 專業 / 白話模式切換、Reset（含 confirm）、Export / Import JSON。
 
 ### `src/components/`
 
+- `OnboardingWizard.jsx`：一次一題的引導問答＋每題「問 AI」＋計畫摘要。
+- `QuestTracker.jsx`：五階段地圖、過關條件勾選、progress bar、單一 micro-task。
+- `AdvisorPanel.jsx`：API key 管理＋目前階段的顧問對話。
+- `AdvisorChat.jsx`：共用聊天元件（精靈與儀表板都用），含「加入」建議按鈕。
 - `FinancialPanel.jsx`：財務生死線輸入與判定。
-- `QuestTracker.jsx`：長期目標、今日可用分鐘數、progress bar、單一 micro-task。
 - `OrgTreePreview.jsx`：Org-Tree 顯示、複製節點、解鎖管理節點。
 
 ### `src/models/financialGuardrails.js`
@@ -137,15 +152,31 @@ App shell 與跨區塊狀態：
 
 設計原則：只看單位經濟，不看產業。
 
-### `src/models/goalPlanner.js`
+### `src/models/onboarding.js`
 
-長期目標拆解與進度：
+引導問答流程：
 
-- `buildQuestPlan({ targetLabel })`
-- `getActiveMilestone({ plan, completedTaskIds })`
-- `getTodayMicroTasks({ plan, completedTaskIds, availableMinutes })`
-- `toggleTask(completedTaskIds, taskId)`
-- `calculateQuestProgress({ plan, completedTaskIds })`
+- `QUESTION_FLOW`：7 題（idea、employment、固定成本、單價、成本、週時數、目標收入）。
+- `isAnswerValid(question, value)`、`createProfile(answers)`。
+
+### `src/models/stagePlanner.js`
+
+五階段路線圖與進度：
+
+- `buildStagePlan({ profile, customizations })`：五階段（explore/prepare/operate/grow/scale），每階段 goals（過關條件）＋ tasks（5–30 分鐘）。
+- `getActiveStage({ plan, completedGoalIds })`：goals 全勾才進下一階段。
+- `getTodayMicroTasks({ plan, completedGoalIds, completedTaskIds, availableMinutes })`
+- `toggleId(ids, id)`、`calculatePlanProgress({ plan, completedGoalIds })`
+
+### `src/models/advisor.js`
+
+AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
+
+- `pickModelForStage(stageId)`：Haiku / Sonnet / Opus 分級。
+- `buildStagePrompt` / `buildQuestionPrompt`：系統提示詞。
+- `parseAdvisorReply(text)`：解析 JSON 回覆，任務分鐘數 clamp 到 5–30、最多 3 任務 2 目標。
+- `canAskToday` / `recordCall` / `DAILY_CALL_LIMIT`：每日呼叫上限。
+- `askAdvisor({...})`：真正的 API 呼叫；無 key 回傳寫死 mock。
 
 ### `src/models/orgTree.js`
 
@@ -173,17 +204,13 @@ App shell 與跨區塊狀態：
 
 ## 5. 測試狀態
 
-目前測試覆蓋（11/11 pass）：
+目前測試覆蓋（24/24 pass）：
 
-- 財務生死線。
-- 虧錢模型拒絕。
-- 在職節奏風險判斷。
-- 長期目標拆成四階段。
-- 今日 micro-task 篩選。
-- 完成 Spark 後解鎖 Runway。
-- Org-Tree 產業無感節點。
-- 子樹複製（含剝除非 schema 欄位）。
-- 管理節點解鎖（需至少兩個營運單位）。
+- 財務生死線、虧錢模型拒絕、在職節奏風險判斷。
+- 引導問答：題目順序、答案驗證、profile 產生（含探索分支與 schema 檢查）。
+- 五階段路線圖：階段結構、目標全勾才解鎖下一階段、今日 micro-task 篩選、顧問建議合併、進度計算。
+- AI 顧問：模型分級、提示詞內容、回覆解析（JSON／純文字／code fence）、建議 clamp、每日上限與跨日重置。
+- Org-Tree：產業無感節點、子樹複製、管理節點解鎖。
 - 文案模式切換與 fallback。
 
 執行：
@@ -194,27 +221,30 @@ npm test
 
 ## 6. 開發守則
 
-1. 不要新增後端、登入、資料庫、金流、AI API。
-2. 不要引入大型狀態管理。
-3. 不要把任何產業字眼寫進底層 schema，例如 foodCost/menuItem/roomNight。
-4. 底層資料只用 domain-agnostic 概念：productId、unitPrice、unitCost、monthlyFixedCost、operating node、milestone、task。
-5. 保留專業術語 / 街頭白話切換。
-6. 保留 tests-first；每次改模型先補測試。
+1. 不要新增後端、登入、資料庫、金流。
+2. AI 只透過使用者自備的 API key 瀏覽器直連；成本防護欄（每日上限、token 上限、mock fallback）不可移除。
+3. 不要引入大型狀態管理。
+4. 不要把任何產業字眼寫進底層 schema，例如 foodCost/menuItem/roomNight。
+5. 底層資料只用 domain-agnostic 概念：productId、unitPrice、unitCost、monthlyFixedCost、operating node、stage、goal、task。
+6. 保留專業術語 / 街頭白話切換。
+7. 保留 tests-first；每次改模型先補測試。
 
 ## 7. Backlog
 
 ### 已完成
 
 - [x] `npm install` / `npm run dev` / `npm test` / `npm run build` 全部可執行。
-- [x] 依賴版本固定（React 18.3.1、Vite 5.4.11）。
-- [x] `src/main.jsx` 拆成 `FinancialPanel` / `QuestTracker` / `OrgTreePreview`。
-- [x] `Reset local data` 按鈕。
-- [x] `Export JSON` 按鈕。
+- [x] 依賴版本固定（React 18.3.1、Vite 5.4.11、@anthropic-ai/sdk 0.110.0）。
+- [x] 元件拆分＋ Reset / Export / Import JSON。
 - [x] 手機版排版（單欄、420px 驗證過）。
+- [x] 引導式問答取代空白儀表板。
+- [x] 五階段路線圖（含可勾選過關條件）。
+- [x] AI 顧問（分級模型、寫死防護欄、mock fallback）。
 
 ### P2
 
-- 加入 mock AI response，但必須 hard-code token budget 與 fallback mock。
+- 顧問對話歷史持久化（目前重新整理就清空，只有採用的建議會留下）。
+- 讓顧問在精靈階段也能建議答案數值（目前只回文字）。
 - 加入更多 micro-task templates，但仍維持每次只顯示一個。
 - 加入 mobile screenshot QA 自動化。
 

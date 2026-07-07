@@ -5,11 +5,15 @@ import FinancialPanel from './components/FinancialPanel.jsx';
 import QuestTracker from './components/QuestTracker.jsx';
 import OrgTreePreview from './components/OrgTreePreview.jsx';
 import OnboardingWizard from './components/OnboardingWizard.jsx';
+import AdvisorPanel from './components/AdvisorPanel.jsx';
 import { createStarterOrgTree } from './models/orgTree.js';
+import { buildStagePlan, getActiveStage } from './models/stagePlanner.js';
 import { modes, getCopy } from './models/terminology.js';
 import './styles/app.css';
 
 const STORAGE_KEY = 'venturequest:v1';
+// The API key lives under its own key so Export JSON never includes it.
+const API_KEY_STORAGE = 'venturequest:apikey:v1';
 
 function defaultState() {
   return {
@@ -19,6 +23,8 @@ function defaultState() {
     availableMinutes: 20,
     completedGoalIds: [],
     completedTaskIds: [],
+    customizations: {},
+    advisorUsage: { date: '', count: 0 },
     orgTree: createStarterOrgTree(),
   };
 }
@@ -35,13 +41,38 @@ function loadState() {
 
 function App() {
   const [state, setState] = useState(loadState);
+  const [apiKey, setApiKey] = useState(
+    () => localStorage.getItem(API_KEY_STORAGE) ?? '',
+  );
   const importRef = useRef(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
 
+  useEffect(() => {
+    if (apiKey) localStorage.setItem(API_KEY_STORAGE, apiKey);
+    else localStorage.removeItem(API_KEY_STORAGE);
+  }, [apiKey]);
+
   const patch = (partial) => setState((prev) => ({ ...prev, ...partial }));
+
+  const addCustomization = (stageId, kind, item) => {
+    setState((prev) => {
+      const existing = prev.customizations[stageId] ?? { goals: [], tasks: [] };
+      const id = `custom-${stageId}-${kind}-${Date.now()}`;
+      return {
+        ...prev,
+        customizations: {
+          ...prev.customizations,
+          [stageId]: {
+            ...existing,
+            [kind]: [...(existing[kind] ?? []), { ...item, id }],
+          },
+        },
+      };
+    });
+  };
 
   const handleOnboardingComplete = (profile) => {
     patch({
@@ -130,12 +161,29 @@ function App() {
             <QuestTracker
               mode={state.mode}
               profile={state.profile}
+              customizations={state.customizations}
               availableMinutes={state.availableMinutes}
               completedGoalIds={state.completedGoalIds}
               completedTaskIds={state.completedTaskIds}
               onAvailableMinutesChange={(availableMinutes) => patch({ availableMinutes })}
               onCompletedGoalIdsChange={(completedGoalIds) => patch({ completedGoalIds })}
               onCompletedTaskIdsChange={(completedTaskIds) => patch({ completedTaskIds })}
+            />
+            <AdvisorPanel
+              apiKey={apiKey}
+              onApiKeyChange={setApiKey}
+              profile={state.profile}
+              activeStage={getActiveStage({
+                plan: buildStagePlan({
+                  profile: state.profile,
+                  customizations: state.customizations,
+                }),
+                completedGoalIds: state.completedGoalIds,
+              })}
+              usage={state.advisorUsage}
+              onUsageChange={(advisorUsage) => patch({ advisorUsage })}
+              onAdoptTask={(stageId, task) => addCustomization(stageId, 'tasks', task)}
+              onAdoptGoal={(stageId, goal) => addCustomization(stageId, 'goals', goal)}
             />
             <FinancialPanel
               mode={state.mode}
@@ -149,7 +197,12 @@ function App() {
             />
           </>
         ) : (
-          <OnboardingWizard onComplete={handleOnboardingComplete} />
+          <OnboardingWizard
+            onComplete={handleOnboardingComplete}
+            apiKey={apiKey}
+            usage={state.advisorUsage}
+            onUsageChange={(advisorUsage) => patch({ advisorUsage })}
+          />
         )}
       </main>
 

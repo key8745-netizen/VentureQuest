@@ -9,16 +9,19 @@ import {
   calculateSurvivalLine,
   suggestAfterWorkPace,
 } from '../models/financialGuardrails.js';
+import AdvisorChat from './AdvisorChat.jsx';
+import { buildQuestionPrompt, pickModelForStage } from '../models/advisor.js';
 
 /**
  * Guided interview shown before the dashboard: one question per
  * screen, then a summary that turns the answers into the user's plan.
  */
-export default function OnboardingWizard({ onComplete }) {
+export default function OnboardingWizard({ onComplete, apiKey, usage, onUsageChange }) {
   const [step, setStep] = useState(0);
   const [answers, setAnswers] = useState({});
   // Number inputs keep raw strings so typing feels natural.
   const [draft, setDraft] = useState('');
+  const [showHelper, setShowHelper] = useState(false);
 
   const onSummary = step >= QUESTION_FLOW.length;
   const question = onSummary ? null : QUESTION_FLOW[step];
@@ -37,6 +40,7 @@ export default function OnboardingWizard({ onComplete }) {
       const saved = answers[target.id];
       setDraft(saved === undefined ? '' : String(saved));
     }
+    setShowHelper(false);
     setStep(nextStep);
   };
 
@@ -127,6 +131,27 @@ export default function OnboardingWizard({ onComplete }) {
         />
       )}
       {question.unit && <p className="muted">{question.unit}</p>}
+
+      <p>
+        <button type="button" className="mini" onClick={() => setShowHelper(!showHelper)}>
+          {showHelper ? '收起 AI 助手' : '不知道怎麼填?問 AI'}
+        </button>
+      </p>
+      {showHelper && (
+        <AdvisorChat
+          key={question.id}
+          apiKey={apiKey}
+          model={pickModelForStage('explore')}
+          systemPrompt={buildQuestionPrompt({
+            question: question.question,
+            hint: question.hint,
+            answers,
+          })}
+          usage={usage}
+          onUsageChange={onUsageChange}
+          placeholder="例如:我不知道固定成本要算哪些…"
+        />
+      )}
 
       <div className="wizard-actions">
         {step > 0 && (
