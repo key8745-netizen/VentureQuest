@@ -1,42 +1,41 @@
 import React from 'react';
 import {
-  buildQuestPlan,
-  getActiveMilestone,
+  buildStagePlan,
+  getActiveStage,
   getTodayMicroTasks,
-  toggleTask,
-  calculateQuestProgress,
-} from '../models/goalPlanner.js';
+  toggleId,
+  calculatePlanProgress,
+} from '../models/stagePlanner.js';
 import { getCopy } from '../models/terminology.js';
 
 export default function QuestTracker({
   mode,
-  targetLabel,
+  profile,
   availableMinutes,
+  completedGoalIds,
   completedTaskIds,
-  onTargetLabelChange,
   onAvailableMinutesChange,
+  onCompletedGoalIdsChange,
   onCompletedTaskIdsChange,
 }) {
-  const plan = buildQuestPlan({ targetLabel });
-  const progress = calculateQuestProgress({ plan, completedTaskIds });
-  const activeMilestone = getActiveMilestone({ plan, completedTaskIds });
-  const todayTasks = getTodayMicroTasks({ plan, completedTaskIds, availableMinutes });
+  const plan = buildStagePlan({ profile });
+  const progress = calculatePlanProgress({ plan, completedGoalIds });
+  const activeStage = getActiveStage({ plan, completedGoalIds });
+  const todayTasks = getTodayMicroTasks({
+    plan,
+    completedGoalIds,
+    completedTaskIds,
+    availableMinutes,
+  });
   // One small win per day beats a backlog: show a single task.
   const todayTask = todayTasks[0] ?? null;
 
   return (
     <section className="card">
       <h2>{getCopy('questProgress', mode)}</h2>
+      <p className="target-label">{plan.targetLabel}</p>
 
       <div className="field-grid">
-        <label className="field">
-          <span>長期目標</span>
-          <input
-            type="text"
-            value={targetLabel}
-            onChange={(event) => onTargetLabelChange(event.target.value)}
-          />
-        </label>
         <label className="field">
           <span>今天可用分鐘數</span>
           <input
@@ -52,22 +51,9 @@ export default function QuestTracker({
         <div className="progress-fill" style={{ width: `${progress.percent}%` }} />
       </div>
       <p className="progress-label">
-        {progress.completedCount} / {progress.totalCount}（{progress.percent}%）
-        {activeMilestone
-          ? ` — 目前階段：${activeMilestone.label}`
-          : ' — 全部完成 🎉'}
+        目標達成 {progress.completedCount} / {progress.totalCount}（{progress.percent}%）
+        {activeStage ? ` — 目前：${activeStage.label}` : ' — 全部完成 🎉'}
       </p>
-
-      <ol className="milestones">
-        {plan.milestones.map((milestone) => (
-          <li
-            key={milestone.id}
-            className={milestone.id === activeMilestone?.id ? 'milestone-active' : ''}
-          >
-            {milestone.label}
-          </li>
-        ))}
-      </ol>
 
       <h3>{getCopy('todayMicroTask', mode)}</h3>
       {todayTask ? (
@@ -76,7 +62,7 @@ export default function QuestTracker({
             type="checkbox"
             checked={completedTaskIds.includes(todayTask.id)}
             onChange={() =>
-              onCompletedTaskIdsChange(toggleTask(completedTaskIds, todayTask.id))
+              onCompletedTaskIdsChange(toggleId(completedTaskIds, todayTask.id))
             }
           />
           <span>
@@ -86,9 +72,56 @@ export default function QuestTracker({
         </label>
       ) : (
         <p className="muted">
-          {activeMilestone ? getCopy('noTaskFitsToday', mode) : '所有任務都完成了。'}
+          {activeStage ? getCopy('noTaskFitsToday', mode) : '所有階段都完成了。'}
         </p>
       )}
+
+      <h3>{getCopy('stageMap', mode)}</h3>
+      <ol className="stages">
+        {plan.stages.map((stage, index) => {
+          const isActive = stage.id === activeStage?.id;
+          const done = stage.goals.every((goal) =>
+            completedGoalIds.includes(goal.id),
+          );
+          return (
+            <li
+              key={stage.id}
+              className={isActive ? 'stage-active' : done ? 'stage-done' : ''}
+            >
+              <div className="stage-head">
+                <strong>
+                  {index + 1}. {stage.label}
+                  {done && ' ✓'}
+                </strong>
+                <span className="muted">{stage.subtitle}</span>
+              </div>
+              {isActive && (
+                <ul className="stage-goals">
+                  {stage.goals.map((goal) => (
+                    <li key={goal.id}>
+                      <label className="goal-item">
+                        <input
+                          type="checkbox"
+                          checked={completedGoalIds.includes(goal.id)}
+                          onChange={() =>
+                            onCompletedGoalIdsChange(
+                              toggleId(completedGoalIds, goal.id),
+                            )
+                          }
+                        />
+                        <span>{goal.label}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+      <p className="muted">
+        {getCopy('stageGoals', mode)}
+      </p>
     </section>
   );
 }

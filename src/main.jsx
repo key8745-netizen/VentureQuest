@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
 import FinancialPanel from './components/FinancialPanel.jsx';
 import QuestTracker from './components/QuestTracker.jsx';
 import OrgTreePreview from './components/OrgTreePreview.jsx';
+import OnboardingWizard from './components/OnboardingWizard.jsx';
 import { createStarterOrgTree } from './models/orgTree.js';
 import { modes, getCopy } from './models/terminology.js';
 import './styles/app.css';
@@ -13,9 +14,10 @@ const STORAGE_KEY = 'venturequest:v1';
 function defaultState() {
   return {
     mode: modes.PLAIN,
+    profile: null,
     financial: { monthlyFixedCost: 30000, unitPrice: 500, unitCost: 200 },
-    targetLabel: '每月副業收入 3 萬',
     availableMinutes: 20,
+    completedGoalIds: [],
     completedTaskIds: [],
     orgTree: createStarterOrgTree(),
   };
@@ -33,6 +35,7 @@ function loadState() {
 
 function App() {
   const [state, setState] = useState(loadState);
+  const importRef = useRef(null);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -40,10 +43,38 @@ function App() {
 
   const patch = (partial) => setState((prev) => ({ ...prev, ...partial }));
 
+  const handleOnboardingComplete = (profile) => {
+    patch({
+      profile,
+      // Seed the financial panel with the wizard answers.
+      financial: {
+        monthlyFixedCost: profile.monthlyFixedCost,
+        unitPrice: profile.unitPrice,
+        unitCost: profile.unitCost,
+      },
+    });
+  };
+
   const handleReset = () => {
     if (!window.confirm('確定要清除所有本機資料，回到初始狀態嗎？')) return;
     localStorage.removeItem(STORAGE_KEY);
     setState(defaultState());
+  };
+
+  const handleImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    e.target.value = '';
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const parsed = JSON.parse(ev.target.result);
+        setState({ ...defaultState(), ...parsed });
+      } catch {
+        alert('無法讀取檔案，請確認是合法的 VentureQuest JSON。');
+      }
+    };
+    reader.readAsText(file);
   };
 
   const handleExport = () => {
@@ -77,6 +108,16 @@ function App() {
           <button type="button" onClick={handleExport}>
             Export JSON
           </button>
+          <button type="button" onClick={() => importRef.current.click()}>
+            Import JSON
+          </button>
+          <input
+            ref={importRef}
+            type="file"
+            accept=".json,application/json"
+            style={{ display: 'none' }}
+            onChange={handleImport}
+          />
           <button type="button" className="danger" onClick={handleReset}>
             Reset local data
           </button>
@@ -84,25 +125,32 @@ function App() {
       </header>
 
       <main>
-        <FinancialPanel
-          mode={state.mode}
-          financial={state.financial}
-          onChange={(financial) => patch({ financial })}
-        />
-        <QuestTracker
-          mode={state.mode}
-          targetLabel={state.targetLabel}
-          availableMinutes={state.availableMinutes}
-          completedTaskIds={state.completedTaskIds}
-          onTargetLabelChange={(targetLabel) => patch({ targetLabel })}
-          onAvailableMinutesChange={(availableMinutes) => patch({ availableMinutes })}
-          onCompletedTaskIdsChange={(completedTaskIds) => patch({ completedTaskIds })}
-        />
-        <OrgTreePreview
-          mode={state.mode}
-          tree={state.orgTree}
-          onTreeChange={(orgTree) => patch({ orgTree })}
-        />
+        {state.profile ? (
+          <>
+            <QuestTracker
+              mode={state.mode}
+              profile={state.profile}
+              availableMinutes={state.availableMinutes}
+              completedGoalIds={state.completedGoalIds}
+              completedTaskIds={state.completedTaskIds}
+              onAvailableMinutesChange={(availableMinutes) => patch({ availableMinutes })}
+              onCompletedGoalIdsChange={(completedGoalIds) => patch({ completedGoalIds })}
+              onCompletedTaskIdsChange={(completedTaskIds) => patch({ completedTaskIds })}
+            />
+            <FinancialPanel
+              mode={state.mode}
+              financial={state.financial}
+              onChange={(financial) => patch({ financial })}
+            />
+            <OrgTreePreview
+              mode={state.mode}
+              tree={state.orgTree}
+              onTreeChange={(orgTree) => patch({ orgTree })}
+            />
+          </>
+        ) : (
+          <OnboardingWizard onComplete={handleOnboardingComplete} />
+        )}
       </main>
 
       <footer className="app-footer">
