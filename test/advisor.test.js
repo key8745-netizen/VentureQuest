@@ -5,6 +5,7 @@ import {
   pickModelForStage,
   buildStagePrompt,
   buildQuestionPrompt,
+  buildGoalPrompt,
   parseAdvisorReply,
   canAskToday,
   recordCall,
@@ -59,6 +60,37 @@ test('question prompt includes the wizard question but no task contract', () => 
   assert.ok(!prompt.includes('"tasks"'));
 });
 
+test('goal prompt carries the goal, its parent path and the steps contract', () => {
+  const prompt = buildGoalPrompt({
+    profile,
+    stage,
+    goal: { id: 'bd-x', label: '取得中餐丙級證照' },
+    pathLabels: ['開店要具備的技能'],
+  });
+  assert.ok(prompt.includes('取得中餐丙級證照'));
+  assert.ok(prompt.includes('開店要具備的技能'));
+  assert.ok(prompt.includes('便當店'));
+  assert.ok(prompt.includes('"steps"'));
+});
+
+test('parses steps suggestions and caps them at five', () => {
+  const parsed = parseAdvisorReply(
+    JSON.stringify({
+      reply: '拆成這幾步',
+      steps: [
+        { label: '查簡章' },
+        { label: '報名課程' },
+        { label: '練習術科' },
+        { label: '考筆試' },
+        { label: '考術科' },
+        { label: '第六步該被丟掉' },
+      ],
+    }),
+  );
+  assert.equal(parsed.steps.length, 5);
+  assert.equal(parsed.steps[0].label, '查簡章');
+});
+
 test('parses a well-formed advisor reply and clamps suggestions', () => {
   const parsed = parseAdvisorReply(
     JSON.stringify({
@@ -85,6 +117,7 @@ test('falls back to plain text when the reply is not JSON', () => {
   assert.equal(parsed.reply, '直接給你一段建議,不是 JSON');
   assert.deepEqual(parsed.tasks, []);
   assert.deepEqual(parsed.goals, []);
+  assert.deepEqual(parsed.steps, []);
 });
 
 test('strips markdown fences before parsing', () => {

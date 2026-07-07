@@ -53,6 +53,28 @@ export function buildStagePrompt({ profile, stage }) {
   ].join('\n');
 }
 
+/**
+ * System prompt for breaking down one stage goal (or one of its
+ * sub-items) the user does not know how to achieve.
+ */
+export function buildGoalPrompt({ profile, stage, goal, pathLabels = [] }) {
+  const path = pathLabels.length > 0 ? `(它是「${pathLabels.join(' > ')}」的子項目)` : '';
+  return [
+    '你是 VentureQuest 的創業顧問,幫還在上班的新手推進副業。',
+    describeProfile(profile),
+    `使用者目前在第「${stage.label}」階段(${stage.subtitle})。`,
+    `使用者不知道怎麼達成這個目標:「${goal.label}」${path}。`,
+    '',
+    '回答規則:',
+    '1. 繁體中文,直接務實,先用不超過 150 字解釋這個目標是什麼、為什麼重要、大概怎麼達成。',
+    '2. 針對使用者的產業給具體內容(例如證照名稱、實際管道)。',
+    '3. 如果這個目標可以拆成更小的檢查項目,輸出 steps:每項是一個可以獨立完成、可以打勾的小目標,依順序排列,最多 5 項。',
+    '4. 一律輸出單一合法 JSON 物件,不要 markdown code fence,格式:',
+    '{"reply": "你的解釋", "steps": [{"label": "可勾選的子項目"}]}',
+    '5. 如果目標已經夠小不用拆,省略 steps 欄位。',
+  ].join('\n');
+}
+
 /** System prompt for the wizard question helper (plain reply only). */
 export function buildQuestionPrompt({ question, hint, answers }) {
   const known = Object.entries(answers ?? {})
@@ -76,7 +98,7 @@ export function buildQuestionPrompt({ question, hint, answers }) {
  * misbehaving reply cannot flood the plan.
  */
 export function parseAdvisorReply(text) {
-  const fallback = { reply: text.trim(), tasks: [], goals: [] };
+  const fallback = { reply: text.trim(), tasks: [], goals: [], steps: [] };
   const cleaned = text
     .trim()
     .replace(/^```(?:json)?\s*/i, '')
@@ -105,7 +127,12 @@ export function parseAdvisorReply(text) {
     .slice(0, 2)
     .map((goal) => ({ label: goal.label }));
 
-  return { reply: parsed.reply, tasks, goals };
+  const steps = (Array.isArray(parsed.steps) ? parsed.steps : [])
+    .filter((step) => step && typeof step.label === 'string')
+    .slice(0, 5)
+    .map((step) => ({ label: step.label }));
+
+  return { reply: parsed.reply, tasks, goals, steps };
 }
 
 /** usage: { date: 'YYYY-MM-DD', count: number } */
@@ -130,15 +157,34 @@ const MOCK_REPLY = {
     '(示範回覆)還沒設定 API key,所以這是寫死的範例。加入你自己的 Anthropic API key 後,顧問會根據你的產業給具體建議。下面是一個示範任務,你可以按「加入」試試整個流程。',
   tasks: [{ label: '(示範)花 15 分鐘查 3 個競爭對手的價格', minutes: 15 }],
   goals: [],
+  steps: [],
+};
+
+export const MOCK_GOAL_REPLY = {
+  reply:
+    '(示範回覆)還沒設定 API key。設定後,顧問會解釋這個目標怎麼達成,並把它拆成你能做到的子項目。下面是示範拆解,按「加入」試試。',
+  tasks: [],
+  goals: [],
+  steps: [
+    { label: '(示範)查清楚這個目標需要什麼條件' },
+    { label: '(示範)把第一個條件排進這週的行程' },
+  ],
 };
 
 /**
- * Sends one question to the advisor. Returns { reply, tasks, goals }.
+ * Sends one question to the advisor. Returns { reply, tasks, goals, steps }.
  * Without an API key, returns the hard-coded mock so the UX still works.
  */
-export async function askAdvisor({ apiKey, model, systemPrompt, history, question }) {
+export async function askAdvisor({
+  apiKey,
+  model,
+  systemPrompt,
+  history,
+  question,
+  mockReply = MOCK_REPLY,
+}) {
   if (!apiKey) {
-    return { ...MOCK_REPLY, mock: true };
+    return { ...mockReply, mock: true };
   }
 
   const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });

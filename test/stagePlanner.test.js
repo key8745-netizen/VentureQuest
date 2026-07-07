@@ -7,6 +7,7 @@ import {
   getTodayMicroTasks,
   toggleId,
   calculatePlanProgress,
+  isGoalComplete,
 } from '../src/models/stagePlanner.js';
 
 const profile = {
@@ -74,6 +75,68 @@ test('merges advisor customizations into the matching stage', () => {
     completedGoalIds = toggleId(completedGoalIds, goalId);
   }
   assert.equal(getActiveStage({ plan, completedGoalIds }).id, 'prepare');
+});
+
+test('a goal with a breakdown completes only through its sub-items', () => {
+  const breakdowns = {
+    'explore-g1': [
+      { id: 'bd-1', label: '查考試簡章' },
+      { id: 'bd-2', label: '報名課程' },
+    ],
+    // Sub-items can be broken down again (recursive).
+    'bd-2': [{ id: 'bd-2-1', label: '比較 3 家課程價格' }],
+  };
+
+  // Checking the parent directly does nothing once it has children.
+  assert.equal(
+    isGoalComplete({ goalId: 'explore-g1', completedGoalIds: ['explore-g1'], breakdowns }),
+    false,
+  );
+
+  // Leaf checks bubble up through every level.
+  assert.equal(
+    isGoalComplete({
+      goalId: 'explore-g1',
+      completedGoalIds: ['bd-1', 'bd-2-1'],
+      breakdowns,
+    }),
+    true,
+  );
+
+  // Missing a nested leaf keeps the whole chain incomplete.
+  assert.equal(
+    isGoalComplete({ goalId: 'explore-g1', completedGoalIds: ['bd-1', 'bd-2'], breakdowns }),
+    false,
+  );
+});
+
+test('stage unlock and progress respect breakdowns', () => {
+  const plan = buildStagePlan({ profile });
+  const exploreGoals = plan.stages[0].goals;
+  const breakdowns = {
+    [exploreGoals[0].id]: [
+      { id: 'bd-a', label: 'a' },
+      { id: 'bd-b', label: 'b' },
+    ],
+  };
+
+  // Check every explore goal except the broken-down one, plus one of
+  // its two sub-items: stage must stay active.
+  let completedGoalIds = exploreGoals.slice(1).map((goal) => goal.id);
+  completedGoalIds = toggleId(completedGoalIds, 'bd-a');
+  assert.equal(
+    getActiveStage({ plan, completedGoalIds, breakdowns }).id,
+    'explore',
+  );
+  const partial = calculatePlanProgress({ plan, completedGoalIds, breakdowns });
+  assert.equal(partial.completedCount, exploreGoals.length - 1);
+
+  completedGoalIds = toggleId(completedGoalIds, 'bd-b');
+  assert.equal(
+    getActiveStage({ plan, completedGoalIds, breakdowns }).id,
+    'prepare',
+    'finishing the last sub-item must unlock the next stage',
+  );
 });
 
 test('a stage completes only when all its goals are checked', () => {

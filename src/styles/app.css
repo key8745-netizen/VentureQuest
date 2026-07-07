@@ -213,6 +213,33 @@ button.mini {
   margin: 0;
 }
 
+.goal-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.goal-row .mini {
+  flex-shrink: 0;
+  margin-left: 0;
+}
+
+.goal-children {
+  list-style: none;
+  margin: 4px 0 4px 12px;
+  padding: 0 0 0 12px;
+  border-left: 2px solid var(--line);
+}
+
+.goal-children > li {
+  padding: 3px 0;
+}
+
+.advisor-steps {
+  margin-top: 8px;
+}
+
 .goal-item {
   display: flex;
   gap: 8px;

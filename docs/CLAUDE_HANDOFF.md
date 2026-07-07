@@ -14,6 +14,7 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 - 引導式問答（onboarding wizard）：一次一題，答完產生計畫；每題可問 AI。
 - 五階段路線圖：探索驗證 → 起飛準備 → 落地營運 → 穩定成長 → 規模擴張。每階段有可勾選的過關條件（goals）＋ 5–30 分鐘 micro-tasks。
 - AI 創業顧問：使用者自備 Anthropic API key（存瀏覽器獨立 key，不隨 Export 匯出），依階段分級選模型（explore/prepare → Haiku、operate/grow → Sonnet、scale → Opus）。顧問可建議新任務／過關條件，使用者按「加入」採用。
+- 目標遞迴拆解：每個過關條件（含子項目）旁有「問 AI」，顧問解釋怎麼達成並可拆成最多 5 個可勾選子項目（存在 `breakdowns`，可無限層遞迴）。有子項目的目標由子項目全勾自動完成，母項目 checkbox 變唯讀。
 - AI 成本防護欄（已寫死在 `advisor.js`）：每日 20 次呼叫上限、單次回覆 1024 tokens、無 key 時 fallback 到寫死的 mock 回覆。
 - 專業術語 / 街頭白話切換。
 - 財務生死線：每月固定成本、單位售價、單位變動成本、最低單量。
@@ -132,6 +133,7 @@ App shell 與跨區塊狀態：
 - `localStorage` 讀寫（app state key: `venturequest:v1`；API key 獨立存 `venturequest:apikey:v1`）。
 - 沒有 `profile` 時顯示 OnboardingWizard，答完才進儀表板。
 - `customizations`：使用者採用的顧問建議（per-stage 額外 goals/tasks）。
+- `breakdowns`：目標的 AI 拆解子項目（`{ [parentId]: [{id,label}] }`，遞迴）。
 - 專業 / 白話模式切換、Reset（含 confirm）、Export / Import JSON。
 
 ### `src/components/`
@@ -164,17 +166,18 @@ App shell 與跨區塊狀態：
 五階段路線圖與進度：
 
 - `buildStagePlan({ profile, customizations })`：五階段（explore/prepare/operate/grow/scale），每階段 goals（過關條件）＋ tasks（5–30 分鐘）。
-- `getActiveStage({ plan, completedGoalIds })`：goals 全勾才進下一階段。
-- `getTodayMicroTasks({ plan, completedGoalIds, completedTaskIds, availableMinutes })`
-- `toggleId(ids, id)`、`calculatePlanProgress({ plan, completedGoalIds })`
+- `isGoalComplete({ goalId, completedGoalIds, breakdowns })`：遞迴判斷,有子項目的目標由子項目決定。
+- `getActiveStage({ plan, completedGoalIds, breakdowns })`：goals 全部完成才進下一階段。
+- `getTodayMicroTasks({ plan, completedGoalIds, completedTaskIds, availableMinutes, breakdowns })`
+- `toggleId(ids, id)`、`calculatePlanProgress({ plan, completedGoalIds, breakdowns })`
 
 ### `src/models/advisor.js`
 
 AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
 - `pickModelForStage(stageId)`：Haiku / Sonnet / Opus 分級。
-- `buildStagePrompt` / `buildQuestionPrompt`：系統提示詞。
-- `parseAdvisorReply(text)`：解析 JSON 回覆，任務分鐘數 clamp 到 5–30、最多 3 任務 2 目標。
+- `buildStagePrompt` / `buildQuestionPrompt` / `buildGoalPrompt`：系統提示詞（goal 版帶父項目路徑,回覆可含 steps 拆解）。
+- `parseAdvisorReply(text)`：解析 JSON 回覆，clamp：最多 3 任務（5–30 分鐘）、2 目標、5 個拆解步驟。
 - `canAskToday` / `recordCall` / `DAILY_CALL_LIMIT`：每日呼叫上限。
 - `askAdvisor({...})`：真正的 API 呼叫；無 key 回傳寫死 mock。
 
@@ -204,11 +207,11 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
 ## 5. 測試狀態
 
-目前測試覆蓋（24/24 pass）：
+目前測試覆蓋（28/28 pass）：
 
 - 財務生死線、虧錢模型拒絕、在職節奏風險判斷。
 - 引導問答：題目順序、答案驗證、profile 產生（含探索分支與 schema 檢查）。
-- 五階段路線圖：階段結構、目標全勾才解鎖下一階段、今日 micro-task 篩選、顧問建議合併、進度計算。
+- 五階段路線圖：階段結構、目標全勾才解鎖下一階段、今日 micro-task 篩選、顧問建議合併、進度計算、拆解子項目的遞迴完成與階段解鎖。
 - AI 顧問：模型分級、提示詞內容、回覆解析（JSON／純文字／code fence）、建議 clamp、每日上限與跨日重置。
 - Org-Tree：產業無感節點、子樹複製、管理節點解鎖。
 - 文案模式切換與 fallback。
@@ -240,6 +243,7 @@ npm test
 - [x] 引導式問答取代空白儀表板。
 - [x] 五階段路線圖（含可勾選過關條件）。
 - [x] AI 顧問（分級模型、寫死防護欄、mock fallback）。
+- [x] 過關條件「問 AI」遞迴拆解成子項目。
 
 ### P2
 
