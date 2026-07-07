@@ -14,7 +14,7 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 - 引導式問答（onboarding wizard）：一次一題，答完產生計畫；每題可問 AI，顧問可附「建議答案」讓使用者一鍵填入。
 - 五階段路線圖：探索驗證 → 起飛準備 → 落地營運 → 穩定成長 → 規模擴張。每階段有可勾選的過關條件（goals）＋ 5–30 分鐘 micro-tasks。
 - AI 創業顧問：使用者自備 Anthropic API key（存瀏覽器獨立 key，不隨 Export 匯出），依階段分級選模型（explore/prepare → Haiku、operate/grow → Sonnet、scale → Opus）。顧問可建議新任務／過關條件，使用者按「加入」採用。
-- 目標遞迴拆解：每個過關條件（含子項目）旁有「問 AI」，顧問解釋怎麼達成並可拆成最多 5 個可勾選子項目（存在 `breakdowns`，可無限層遞迴）。有子項目的目標由子項目全勾自動完成，母項目 checkbox 變唯讀。
+- 目標遞迴拆解：每個過關條件（含子項目）旁有「問 AI」，顧問解釋怎麼達成並可拆成最多 5 個可勾選子項目（存在 `breakdowns`，可無限層遞迴）。有子項目的目標由子項目全勾自動完成，母項目 checkbox 變唯讀。AI 加入的項目（子項目、採用的過關條件）都可用「✕」移除，整個子樹一起清掉；子項目清空後母項目恢復可直接勾選。內建的階段條件不可移除。
 - AI 成本防護欄（已寫死在 `advisor.js`）：每日 20 次呼叫上限、單次回覆 1024 tokens、無 key 時 fallback 到寫死的 mock 回覆。
 - 專業術語 / 街頭白話切換。
 - 財務生死線：每月固定成本、單位售價、單位變動成本、最低單量。
@@ -180,6 +180,7 @@ App shell 與跨區塊狀態：
 
 - `buildStagePlan({ profile, customizations })`：五階段（explore/prepare/operate/grow/scale），每階段 goals（過關條件）＋ tasks（5–30 分鐘）。
 - `isGoalComplete({ goalId, completedGoalIds, breakdowns })`：遞迴判斷,有子項目的目標由子項目決定。
+- `removeBreakdownItem(breakdowns, itemId)`：移除項目與其整個子樹;父項目清空後恢復可直接勾選。
 - `getActiveStage({ plan, completedGoalIds, breakdowns })`：goals 全部完成才進下一階段。
 - `getTodayMicroTasks({ plan, completedGoalIds, completedTaskIds, availableMinutes, breakdowns })`
 - `toggleId(ids, id)`、`calculatePlanProgress({ plan, completedGoalIds, breakdowns })`
@@ -221,14 +222,14 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
 ## 5. 測試狀態
 
-目前測試覆蓋（33/33 pass）：
+目前測試覆蓋（34/34 pass）：
 
 - 財務生死線、虧錢模型拒絕、在職節奏風險判斷。
 - 引導問答：題目順序、答案驗證、profile 產生（含探索分支與 schema 檢查）。
 - 五階段路線圖：階段結構、目標全勾才解鎖下一階段、今日 micro-task 篩選、顧問建議合併、進度計算、拆解子項目的遞迴完成與階段解鎖。
 - AI 顧問：模型分級、提示詞內容、回覆解析（JSON／純文字／code fence）、建議 clamp、每日上限與跨日重置、對話歷史裁剪與 API 上下文組裝（排除 mock、限最近 6 輪）。
 - Org-Tree：產業無感節點、子樹複製、管理節點解鎖。
-- 文案模式切換與 fallback。
+- 文案模式切換與 fallback（含顧問時代新增的 UI 詞條）。
 
 執行：
 
@@ -263,6 +264,8 @@ npm test
 - [x] 更多 micro-task 模板（prepare +2、operate/grow/scale 各 +1）。
 - [x] Mobile screenshot QA 自動化（`npm run qa:mobile`）。
 - [x] 顧問提示詞帶即時財務數字與過關條件完成狀態。
+- [x] 白話／專業切換覆蓋顧問、精靈、拆解等新 UI。
+- [x] AI 加入的子項目與過關條件可移除（含子樹遞迴清除）。
 
 ### P2
 

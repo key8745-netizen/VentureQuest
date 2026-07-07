@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import AdvisorChat from './AdvisorChat.jsx';
+import { getCopy } from '../models/terminology.js';
 import {
   pickModelForStage,
   buildStagePrompt,
@@ -13,6 +14,7 @@ const MODEL_LABELS = {
 };
 
 export default function AdvisorPanel({
+  mode,
   apiKey,
   onApiKeyChange,
   profile,
@@ -33,7 +35,7 @@ export default function AdvisorPanel({
   if (!activeStage) {
     return (
       <section className="card">
-        <h2>AI 創業顧問</h2>
+        <h2>{getCopy('advisorTitle', mode)}</h2>
         <p className="muted">所有階段都完成了,顧問先下班。</p>
       </section>
     );
@@ -50,7 +52,7 @@ export default function AdvisorPanel({
 
   return (
     <section className="card">
-      <h2>AI 創業顧問</h2>
+      <h2>{getCopy('advisorTitle', mode)}</h2>
       <p className="muted">
         依你的階段自動選模型:目前是「{activeStage.label}」→ {MODEL_LABELS[model] ?? model}。
         每天最多 {DAILY_CALL_LIMIT} 次。

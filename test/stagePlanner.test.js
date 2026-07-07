@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  removeBreakdownItem,
   buildStagePlan,
   getActiveStage,
   getTodayMicroTasks,
@@ -202,4 +203,42 @@ test('plan progress counts goals, and toggleId never mutates its input', () => {
   const reverted = toggleId(completedGoalIds, firstGoalId);
   assert.ok(!reverted.includes(firstGoalId));
   assert.ok(completedGoalIds.includes(firstGoalId), 'input must not be mutated');
+});
+
+test('removeBreakdownItem drops the item and its whole subtree', () => {
+  const breakdowns = {
+    'g1': [
+      { id: 'a', label: 'a' },
+      { id: 'b', label: 'b' },
+    ],
+    'b': [{ id: 'b1', label: 'b1' }],
+    'b1': [{ id: 'b1x', label: 'b1x' }],
+    'g2': [{ id: 'c', label: 'c' }],
+  };
+
+  // Removing a leaf keeps everything else.
+  const withoutA = removeBreakdownItem(breakdowns, 'a');
+  assert.deepEqual(withoutA['g1'].map((i) => i.id), ['b']);
+  assert.ok(withoutA['b'], 'siblings and their subtrees survive');
+
+  // Removing a mid-tree item purges its descendants too.
+  const withoutB = removeBreakdownItem(breakdowns, 'b');
+  assert.deepEqual(withoutB['g1'].map((i) => i.id), ['a']);
+  assert.equal(withoutB['b'], undefined);
+  assert.equal(withoutB['b1'], undefined);
+  assert.ok(withoutB['g2'], 'unrelated goals untouched');
+
+  // Removing the last child deletes the parent key entirely, so the
+  // parent goal becomes manually checkable again.
+  const only = { 'g1': [{ id: 'solo', label: 's' }] };
+  const emptied = removeBreakdownItem(only, 'solo');
+  assert.equal(emptied['g1'], undefined);
+  assert.equal(
+    isGoalComplete({ goalId: 'g1', completedGoalIds: ['g1'], breakdowns: emptied }),
+    true,
+    'parent reverts to direct checking',
+  );
+
+  // Input is never mutated.
+  assert.equal(breakdowns['g1'].length, 2);
 });

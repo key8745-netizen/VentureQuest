@@ -10,6 +10,7 @@ import {
   suggestAfterWorkPace,
 } from '../models/financialGuardrails.js';
 import AdvisorChat from './AdvisorChat.jsx';
+import { getCopy } from '../models/terminology.js';
 import { buildQuestionPrompt, pickModelForStage } from '../models/advisor.js';
 
 /**
@@ -17,6 +18,7 @@ import { buildQuestionPrompt, pickModelForStage } from '../models/advisor.js';
  * screen, then a summary that turns the answers into the user's plan.
  */
 export default function OnboardingWizard({
+  mode,
   onComplete,
   apiKey,
   usage,
@@ -141,7 +143,7 @@ export default function OnboardingWizard({
 
       <p>
         <button type="button" className="mini" onClick={() => setShowHelper(!showHelper)}>
-          {showHelper ? '收起 AI 助手' : '不知道怎麼填?問 AI'}
+          {showHelper ? '收起 AI 助手' : getCopy('wizardAskAi', mode)}
         </button>
       </p>
       {showHelper && (
