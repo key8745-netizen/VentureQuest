@@ -53,15 +53,35 @@ test('stage prompt carries the user context and the JSON contract', () => {
   assert.ok(prompt.includes('"tasks"'));
 });
 
-test('question prompt includes the wizard question but no task contract', () => {
+test('question prompt includes the wizard question and the answer contract', () => {
   const prompt = buildQuestionPrompt({
     question: '賣一個收多少錢?',
     hint: '一份餐、一小時服務',
+    type: 'number',
     answers: { idea: '便當店' },
   });
   assert.ok(prompt.includes('賣一個收多少錢'));
   assert.ok(prompt.includes('便當店'));
+  assert.ok(prompt.includes('"answer"'), 'must ask for a fill-in answer');
+  assert.ok(prompt.includes('數字'), 'number questions ask for a numeric answer');
   assert.ok(!prompt.includes('"tasks"'));
+});
+
+test('parses a suggested answer and rejects junk values', () => {
+  const numeric = parseAdvisorReply(JSON.stringify({ reply: 'ok', answer: 35000 }));
+  assert.equal(numeric.answer, 35000);
+
+  const text = parseAdvisorReply(JSON.stringify({ reply: 'ok', answer: '  賣給上班族的健康便當  ' }));
+  assert.equal(text.answer, '賣給上班族的健康便當');
+
+  const negative = parseAdvisorReply(JSON.stringify({ reply: 'ok', answer: -5 }));
+  assert.equal(negative.answer, null);
+
+  const junk = parseAdvisorReply(JSON.stringify({ reply: 'ok', answer: { nested: true } }));
+  assert.equal(junk.answer, null);
+
+  const none = parseAdvisorReply(JSON.stringify({ reply: 'ok' }));
+  assert.equal(none.answer, null);
 });
 
 test('goal prompt carries the goal, its parent path and the steps contract', () => {

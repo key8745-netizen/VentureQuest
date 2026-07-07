@@ -11,7 +11,7 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 - React single-page MVP。
 - `localStorage` 暫存，不做登入。
 - 無後端、無資料庫。
-- 引導式問答（onboarding wizard）：一次一題，答完產生計畫；每題可問 AI。
+- 引導式問答（onboarding wizard）：一次一題，答完產生計畫；每題可問 AI，顧問可附「建議答案」讓使用者一鍵填入。
 - 五階段路線圖：探索驗證 → 起飛準備 → 落地營運 → 穩定成長 → 規模擴張。每階段有可勾選的過關條件（goals）＋ 5–30 分鐘 micro-tasks。
 - AI 創業顧問：使用者自備 Anthropic API key（存瀏覽器獨立 key，不隨 Export 匯出），依階段分級選模型（explore/prepare → Haiku、operate/grow → Sonnet、scale → Opus）。顧問可建議新任務／過關條件，使用者按「加入」採用。
 - 目標遞迴拆解：每個過關條件（含子項目）旁有「問 AI」，顧問解釋怎麼達成並可拆成最多 5 個可勾選子項目（存在 `breakdowns`，可無限層遞迴）。有子項目的目標由子項目全勾自動完成，母項目 checkbox 變唯讀。
@@ -178,7 +178,7 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
 - `pickModelForStage(stageId)`：Haiku / Sonnet / Opus 分級。
 - `buildStagePrompt` / `buildQuestionPrompt` / `buildGoalPrompt`：系統提示詞（goal 版帶父項目路徑,回覆可含 steps 拆解）。
-- `parseAdvisorReply(text)`：解析 JSON 回覆，clamp：最多 3 任務（5–30 分鐘）、2 目標、5 個拆解步驟。
+- `parseAdvisorReply(text)`：解析 JSON 回覆，clamp：最多 3 任務（5–30 分鐘）、2 目標、5 個拆解步驟；answer 只接受非負數字或 80 字內字串。
 - `canAskToday` / `recordCall` / `DAILY_CALL_LIMIT`：每日呼叫上限。
 - `capHistory` / `buildMessages`：每個對話最多存 10 輪；呼叫 API 只帶最近 6 輪真實對話（mock 不算）。
 - `askAdvisor({...})`：真正的 API 呼叫；無 key 回傳寫死 mock。
@@ -209,7 +209,7 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
 ## 5. 測試狀態
 
-目前測試覆蓋（30/30 pass）：
+目前測試覆蓋（31/31 pass）：
 
 - 財務生死線、虧錢模型拒絕、在職節奏風險判斷。
 - 引導問答：題目順序、答案驗證、profile 產生（含探索分支與 schema 檢查）。
@@ -247,10 +247,10 @@ npm test
 - [x] AI 顧問（分級模型、寫死防護欄、mock fallback）。
 - [x] 過關條件「問 AI」遞迴拆解成子項目。
 - [x] 顧問對話歷史持久化（per-context、10 輪上限、採用狀態一併保存）。
+- [x] 精靈問答的 AI 建議答案一鍵填入。
 
 ### P2
 
-- 讓顧問在精靈階段也能建議答案數值（目前只回文字）。
 - 加入更多 micro-task templates，但仍維持每次只顯示一個。
 - 加入 mobile screenshot QA 自動化。
 

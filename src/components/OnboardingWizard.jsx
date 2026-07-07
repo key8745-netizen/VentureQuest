@@ -152,6 +152,7 @@ export default function OnboardingWizard({
           systemPrompt={buildQuestionPrompt({
             question: question.question,
             hint: question.hint,
+            type: question.type,
             answers,
           })}
           history={advisorHistories[`wizard:${question.id}`] ?? []}
@@ -160,6 +161,18 @@ export default function OnboardingWizard({
           }
           usage={usage}
           onUsageChange={onUsageChange}
+          onAdoptAnswer={(answer) => setDraft(String(answer))}
+          mockReply={{
+            reply:
+              '(示範回覆)還沒設定 API key。設定後,顧問會針對這一題給你具體建議,並附上可以一鍵填入的答案,像下面這樣。',
+            tasks: [],
+            goals: [],
+            steps: [],
+            answer:
+              question.type === 'number'
+                ? 20000
+                : '(示範)賣給附近上班族的平價健康便當',
+          }}
           placeholder="例如:我不知道固定成本要算哪些…"
         />
       )}

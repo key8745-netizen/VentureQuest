@@ -25,6 +25,7 @@ export default function AdvisorChat({
   onAdoptTask,
   onAdoptGoal,
   onAdoptSteps,
+  onAdoptAnswer,
   mockReply,
   placeholder,
 }) {
@@ -88,6 +89,20 @@ export default function AdvisorChat({
         <div key={turnIndex} className="advisor-turn">
           <p className="advisor-question">{turn.question}</p>
           <p className="advisor-reply">{turn.reply}</p>
+          {turn.answer != null && onAdoptAnswer && (
+            <ul className="advisor-suggestions">
+              <li>
+                <span>建議答案:{turn.answer}</span>
+                <button
+                  type="button"
+                  className="mini"
+                  onClick={() => adopt(turnIndex, 'a', () => onAdoptAnswer(turn.answer))}
+                >
+                  {isAdopted(turn, 'a') ? '再填一次' : '填入'}
+                </button>
+              </li>
+            </ul>
+          )}
           {turn.steps?.length > 0 && onAdoptSteps && (
             <div className="advisor-steps">
               <ul className="advisor-suggestions">
