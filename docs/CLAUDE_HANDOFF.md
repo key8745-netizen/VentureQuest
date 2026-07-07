@@ -47,7 +47,7 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 **適合 Haiku / 低階模型（機械性、範圍明確）：**
 
 - 改文案、加 `terminology.js` 的詞條（記得 PRO/PLAIN 兩種都要寫）。
-- 加更多 micro-task 模板到 `goalPlanner.js` 的 `MILESTONE_TEMPLATES`（每個任務 5–30 分鐘，先補測試）。
+- 加更多 micro-task 模板到 `stagePlanner.js` 的 `STAGE_TEMPLATES`（每個任務 5–30 分鐘，先補測試）。
 - 調 CSS、改配色、微調手機版排版。
 - 修 typo、更新文件。
 
@@ -81,6 +81,18 @@ npm install
 npm run dev
 npm test
 npm run build
+npm run qa:mobile   # 手機版截圖 QA(見下)
+```
+
+### Mobile screenshot QA
+
+`scripts/mobile-qa.mjs` 用 Playwright 在 390×844 視窗走完整流程(精靈、問 AI、拆解、專業模式),截 7 張全頁圖到 `qa-screenshots/`(已 gitignore)。全程 mock 模式,0 成本離線可跑:
+
+```bash
+npm run build && npm run preview &
+npm install --no-save playwright   # 刻意不進 devDependencies,避免拖累安裝
+npm run qa:mobile
+# 沙箱/CI 有預裝瀏覽器時:CHROMIUM_PATH=/path/to/chromium npm run qa:mobile
 ```
 
 ## 3. 環境狀態
@@ -248,11 +260,12 @@ npm test
 - [x] 過關條件「問 AI」遞迴拆解成子項目。
 - [x] 顧問對話歷史持久化（per-context、10 輪上限、採用狀態一併保存）。
 - [x] 精靈問答的 AI 建議答案一鍵填入。
+- [x] 更多 micro-task 模板（prepare +2、operate/grow/scale 各 +1）。
+- [x] Mobile screenshot QA 自動化（`npm run qa:mobile`）。
 
 ### P2
 
-- 加入更多 micro-task templates，但仍維持每次只顯示一個。
-- 加入 mobile screenshot QA 自動化。
+（已全部完成,見上方「已完成」。）
 
 ## 8. 核心商業原則
 
