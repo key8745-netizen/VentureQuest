@@ -1,0 +1,287 @@
+:root {
+  --bg: #f4f2ec;
+  --ink: #23211c;
+  --muted: #6f6a5e;
+  --card: #ffffff;
+  --line: #e2ddd0;
+  --accent: #1f6f54;
+  --accent-soft: #dcefe6;
+  --danger: #b3372e;
+  --danger-soft: #f7e2e0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Avenir Next', 'PingFang TC', 'Noto Sans TC', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.55;
+}
+
+.app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 16px 16px 48px;
+}
+
+.app-header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 8px 0 16px;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.4rem;
+}
+
+.tagline {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+button {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--accent);
+}
+
+button.danger {
+  color: var(--danger);
+}
+
+button.mini {
+  padding: 2px 8px;
+  margin-left: 8px;
+  font-size: 0.75rem;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.card h2 {
+  margin: 0 0 12px;
+  font-size: 1.05rem;
+}
+
+.card h3 {
+  margin: 16px 0 8px;
+  font-size: 0.95rem;
+}
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.field input {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  width: 100%;
+}
+
+.field input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.verdict {
+  border-radius: 8px;
+  padding: 10px 14px;
+}
+
+.verdict p {
+  margin: 4px 0;
+}
+
+.verdict-ok {
+  background: var(--accent-soft);
+}
+
+.verdict-danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.big-number strong {
+  font-size: 1.5rem;
+}
+
+.progress-track {
+  height: 12px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.progress-label {
+  margin: 6px 0 0;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.milestones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 0;
+  margin: 12px 0;
+  list-style: none;
+  counter-reset: milestone;
+}
+
+.milestones li {
+  counter-increment: milestone;
+  font-size: 0.8rem;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+}
+
+.milestones li::before {
+  content: counter(milestone) '. ';
+}
+
+.milestones li.milestone-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.micro-task {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px;
+  border: 1px dashed var(--accent);
+  border-radius: 8px;
+  background: var(--accent-soft);
+  cursor: pointer;
+}
+
+.micro-task input {
+  margin-top: 4px;
+}
+
+.micro-task em {
+  display: block;
+  font-style: normal;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.org-tree,
+.org-tree ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.org-tree {
+  padding-left: 0;
+}
+
+.org-tree li {
+  margin: 6px 0;
+}
+
+.node {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  background: var(--bg);
+}
+
+.node-operating-unit {
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.node-management-layer {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.unlock-row {
+  margin-top: 12px;
+}
+
+.unlock-row p {
+  margin: 6px 0 0;
+}
+
+.app-footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+@media (max-width: 480px) {
+  .app-header {
+    flex-direction: column;
+  }
+
+  .field-grid {
+    grid-template-columns: 1fr;
+  }
+}
