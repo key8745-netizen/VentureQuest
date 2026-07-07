@@ -46,6 +46,8 @@ const STAGE_TEMPLATES = [
       { id: 'prepare-4', label: '挑一個客源管道，訂下每週固定要做的一件事', minutes: 15 },
       { id: 'prepare-5', label: '查你的業種需要什麼登記或執照', minutes: 30 },
       { id: 'prepare-6', label: '寫下離職條件清單：數字到了才走', minutes: 15 },
+      { id: 'prepare-7', label: '開一張副業專用的收支記錄表', minutes: 10 },
+      { id: 'prepare-8', label: '傳訊息關心 1 位舊客戶，看會不會回購', minutes: 10 },
     ],
   },
   {
@@ -64,6 +66,7 @@ const STAGE_TEMPLATES = [
       { id: 'operate-3', label: '建一張簡單的月損益表：收入、成本、剩下', minutes: 20 },
       { id: 'operate-4', label: '跟 1 位滿意的客戶要一段書面評價', minutes: 10 },
       { id: 'operate-5', label: '檢查本月單量有沒有超過生死線', minutes: 10 },
+      { id: 'operate-6', label: '比較 3 個同業的定價，決定要不要調整', minutes: 20 },
     ],
   },
   {
@@ -82,6 +85,7 @@ const STAGE_TEMPLATES = [
       { id: 'grow-3', label: '找 1 個可能的助理或外包人選並開口', minutes: 15 },
       { id: 'grow-4', label: '設計一句轉介話術，傳給 3 位老客戶', minutes: 15 },
       { id: 'grow-5', label: '訂下每週 30 分鐘的看數字儀式時間', minutes: 5 },
+      { id: 'grow-6', label: '寫下這個月最想丟掉的 1 件雜事', minutes: 5 },
     ],
   },
   {
@@ -98,6 +102,7 @@ const STAGE_TEMPLATES = [
       { id: 'scale-2', label: '列出你不在的時候，誰負責什麼', minutes: 20 },
       { id: 'scale-3', label: '訂出管理層每週例行檢查清單', minutes: 15 },
       { id: 'scale-4', label: '寫下找夥伴或資金的利與弊', minutes: 30 },
+      { id: 'scale-5', label: '寫下明年要達成的 3 個數字目標', minutes: 30 },
     ],
   },
 ];
