@@ -7,7 +7,11 @@ import OrgTreePreview from './components/OrgTreePreview.jsx';
 import OnboardingWizard from './components/OnboardingWizard.jsx';
 import AdvisorPanel from './components/AdvisorPanel.jsx';
 import { createStarterOrgTree } from './models/orgTree.js';
-import { buildStagePlan, getActiveStage } from './models/stagePlanner.js';
+import {
+  buildStagePlan,
+  getActiveStage,
+  removeBreakdownItem,
+} from './models/stagePlanner.js';
 import { capHistory } from './models/advisor.js';
 import { modes, getCopy } from './models/terminology.js';
 import './styles/app.css';
@@ -99,6 +103,29 @@ function App() {
         breakdowns: {
           ...prev.breakdowns,
           [parentId]: [...(prev.breakdowns[parentId] ?? []), ...items],
+        },
+      };
+    });
+  };
+
+  // Remove an AI-added item: a breakdown sub-item, or an adopted
+  // custom goal (plus any breakdown subtree hanging off it).
+  const handleRemoveItem = (goal, { isCustomGoal, stageId }) => {
+    setState((prev) => {
+      const breakdowns = removeBreakdownItem(prev.breakdowns, goal.id);
+      if (!isCustomGoal) return { ...prev, breakdowns };
+
+      const existing = prev.customizations[stageId];
+      if (!existing) return { ...prev, breakdowns };
+      return {
+        ...prev,
+        breakdowns,
+        customizations: {
+          ...prev.customizations,
+          [stageId]: {
+            ...existing,
+            goals: (existing.goals ?? []).filter((g) => g.id !== goal.id),
+          },
         },
       };
     });
@@ -201,6 +228,7 @@ function App() {
               onCompletedGoalIdsChange={(completedGoalIds) => patch({ completedGoalIds })}
               onCompletedTaskIdsChange={(completedTaskIds) => patch({ completedTaskIds })}
               onAddBreakdown={addBreakdownItems}
+              onRemoveItem={handleRemoveItem}
               apiKey={apiKey}
               usage={state.advisorUsage}
               onUsageChange={(advisorUsage) => patch({ advisorUsage })}

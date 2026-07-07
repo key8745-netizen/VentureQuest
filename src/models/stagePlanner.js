@@ -193,6 +193,29 @@ export function getTodayMicroTasks({
   );
 }
 
+/**
+ * Removes one breakdown item and its entire subtree. Parents whose
+ * child list becomes empty lose their key, so they revert to being
+ * directly checkable. Never mutates the input.
+ */
+export function removeBreakdownItem(breakdowns, itemId) {
+  const purge = new Set();
+  const stack = [itemId];
+  while (stack.length > 0) {
+    const id = stack.pop();
+    purge.add(id);
+    for (const child of breakdowns[id] ?? []) stack.push(child.id);
+  }
+
+  const next = {};
+  for (const [parentId, children] of Object.entries(breakdowns)) {
+    if (purge.has(parentId)) continue;
+    const kept = children.filter((child) => !purge.has(child.id));
+    if (kept.length > 0) next[parentId] = kept;
+  }
+  return next;
+}
+
 /** Returns a new array with the id toggled; never mutates the input. */
 export function toggleId(ids, id) {
   if (ids.includes(id)) {

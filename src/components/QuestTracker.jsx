@@ -32,6 +32,7 @@ function GoalItem({
   onOpenChat,
   onToggle,
   onAddBreakdown,
+  onRemoveItem,
   apiKey,
   usage,
   onUsageChange,
@@ -42,6 +43,21 @@ function GoalItem({
   const hasChildren = children.length > 0;
   const complete = isGoalComplete({ goalId: goal.id, completedGoalIds, breakdowns });
   const chatOpen = openChatId === goal.id;
+  // Only AI-added items are removable: breakdown sub-items (depth > 0)
+  // and adopted custom goals. Built-in stage goals stay.
+  const isBreakdownItem = pathLabels.length > 0;
+  const isCustomGoal = pathLabels.length === 0 && goal.id.startsWith('custom-');
+  const removable = isBreakdownItem || isCustomGoal;
+
+  const handleRemove = () => {
+    if (
+      hasChildren &&
+      !window.confirm('這個項目底下還有子項目,會一起移除。確定嗎?')
+    ) {
+      return;
+    }
+    onRemoveItem(goal, { isCustomGoal, stageId: stage.id });
+  };
 
   return (
     <li>
@@ -55,13 +71,25 @@ function GoalItem({
           />
           <span>{goal.label}</span>
         </label>
-        <button
-          type="button"
-          className="mini"
-          onClick={() => onOpenChat(chatOpen ? null : goal.id)}
-        >
-          {chatOpen ? '收起' : getCopy('askAi', mode)}
-        </button>
+        <span className="goal-actions">
+          <button
+            type="button"
+            className="mini"
+            onClick={() => onOpenChat(chatOpen ? null : goal.id)}
+          >
+            {chatOpen ? '收起' : getCopy('askAi', mode)}
+          </button>
+          {removable && (
+            <button
+              type="button"
+              className="mini danger"
+              aria-label="移除這個項目"
+              onClick={handleRemove}
+            >
+              ✕
+            </button>
+          )}
+        </span>
       </div>
 
       {chatOpen && (
@@ -97,6 +125,7 @@ function GoalItem({
               onOpenChat={onOpenChat}
               onToggle={onToggle}
               onAddBreakdown={onAddBreakdown}
+              onRemoveItem={onRemoveItem}
               apiKey={apiKey}
               usage={usage}
               onUsageChange={onUsageChange}
@@ -123,6 +152,7 @@ export default function QuestTracker({
   onCompletedGoalIdsChange,
   onCompletedTaskIdsChange,
   onAddBreakdown,
+  onRemoveItem,
   apiKey,
   usage,
   onUsageChange,
@@ -228,6 +258,7 @@ export default function QuestTracker({
                         onCompletedGoalIdsChange(toggleId(completedGoalIds, goalId))
                       }
                       onAddBreakdown={onAddBreakdown}
+                      onRemoveItem={onRemoveItem}
                       apiKey={apiKey}
                       usage={usage}
                       onUsageChange={onUsageChange}

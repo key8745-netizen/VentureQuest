@@ -225,6 +225,12 @@ button.mini {
   margin-left: 0;
 }
 
+.goal-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .goal-children {
   list-style: none;
   margin: 4px 0 4px 12px;
