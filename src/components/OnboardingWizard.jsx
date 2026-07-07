@@ -20,6 +20,8 @@ import { buildQuestionPrompt, pickModelForStage } from '../models/advisor.js';
 export default function OnboardingWizard({
   mode,
   onComplete,
+  onCancel,
+  initialAnswers,
   apiKey,
   usage,
   onUsageChange,
@@ -27,9 +29,12 @@ export default function OnboardingWizard({
   onAdvisorHistoryChange,
 }) {
   const [step, setStep] = useState(0);
-  const [answers, setAnswers] = useState({});
+  const [answers, setAnswers] = useState(() => ({ ...(initialAnswers ?? {}) }));
   // Number inputs keep raw strings so typing feels natural.
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState(() => {
+    const first = initialAnswers?.[QUESTION_FLOW[0].id];
+    return first === undefined ? '' : String(first);
+  });
   const [showHelper, setShowHelper] = useState(false);
 
   const onSummary = step >= QUESTION_FLOW.length;
@@ -93,12 +98,17 @@ export default function OnboardingWizard({
           <button type="button" onClick={() => goTo(QUESTION_FLOW.length - 1)}>
             上一步
           </button>
+          {onCancel && (
+            <button type="button" onClick={onCancel}>
+              取消
+            </button>
+          )}
           <button
             type="button"
             className="primary"
             onClick={() => onComplete(profile)}
           >
-            開始闖關
+            {initialAnswers ? '儲存修改' : '開始闖關'}
           </button>
         </div>
       </section>
@@ -183,6 +193,11 @@ export default function OnboardingWizard({
         {step > 0 && (
           <button type="button" onClick={() => goTo(step - 1)}>
             上一步
+          </button>
+        )}
+        {onCancel && (
+          <button type="button" onClick={onCancel}>
+            取消
           </button>
         )}
         {question.allowUnknown && (
