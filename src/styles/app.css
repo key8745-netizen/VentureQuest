@@ -168,34 +168,126 @@ button.mini {
   color: var(--muted);
 }
 
-.milestones {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  padding: 0;
-  margin: 12px 0;
-  list-style: none;
-  counter-reset: milestone;
+.target-label {
+  margin: -4px 0 12px;
+  font-weight: 600;
 }
 
-.milestones li {
-  counter-increment: milestone;
-  font-size: 0.8rem;
-  padding: 4px 10px;
+.stages {
+  padding: 0;
+  margin: 12px 0 8px;
+  list-style: none;
+}
+
+.stages li {
+  padding: 10px 12px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.stages li.stage-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.stages li.stage-done {
+  opacity: 0.65;
+}
+
+.stage-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stage-goals {
+  list-style: none;
+  padding: 8px 0 0;
+  margin: 0;
+}
+
+.stage-goals li {
+  border: none;
+  padding: 3px 0;
+  margin: 0;
+}
+
+.goal-item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.goal-item input {
+  margin-top: 4px;
+}
+
+.wizard {
+  max-width: 480px;
+  margin: 24px auto;
+}
+
+.wizard-step {
+  margin: 0 0 4px;
+  font-size: 0.8rem;
   color: var(--muted);
 }
 
-.milestones li::before {
-  content: counter(milestone) '. ';
+.wizard-input {
+  font: inherit;
+  width: 100%;
+  padding: 10px 12px;
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
 }
 
-.milestones li.milestone-active {
+.wizard-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.wizard-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.wizard-choices .choice {
+  text-align: left;
+  padding: 12px;
+  font-size: 0.95rem;
+}
+
+.wizard-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.wizard-actions .primary {
+  background: var(--accent);
   border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-weight: 600;
+  color: #fff;
+}
+
+.wizard-actions .primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.wizard-summary {
+  padding-left: 20px;
+  margin: 12px 0;
+}
+
+.wizard-summary li {
+  margin: 6px 0;
 }
 
 .micro-task {
