@@ -12,6 +12,10 @@ import Anthropic from '@anthropic-ai/sdk';
 
 export const DAILY_CALL_LIMIT = 20;
 export const MAX_REPLY_TOKENS = 1024;
+// Persisted turns per conversation, and how many of them are re-sent
+// as context on each call (token guardrail).
+export const HISTORY_KEEP_LIMIT = 10;
+export const HISTORY_SEND_LIMIT = 6;
 
 const STAGE_MODELS = {
   explore: 'claude-haiku-4-5',
@@ -75,20 +79,28 @@ export function buildGoalPrompt({ profile, stage, goal, pathLabels = [] }) {
   ].join('\n');
 }
 
-/** System prompt for the wizard question helper (plain reply only). */
-export function buildQuestionPrompt({ question, hint, answers }) {
+/** System prompt for the wizard question helper (reply + fill-in answer). */
+export function buildQuestionPrompt({ question, hint, type, answers }) {
   const known = Object.entries(answers ?? {})
     .filter(([, value]) => value !== '' && value !== undefined)
     .map(([key, value]) => `${key}: ${value}`)
     .join('、');
+  const answerRule =
+    type === 'number'
+      ? 'answer 必須是純數字(不要單位、不要千分位),是你建議直接填入這一題的值。'
+      : 'answer 是一句可以直接填入這一題的話,不超過 40 字。';
 
   return [
     '你是 VentureQuest 的創業顧問,正在幫一位還在上班的新手回答建立計畫時的問題。',
     `目前的問題:「${question}」${hint ? `(提示:${hint})` : ''}`,
     known ? `使用者已回答:${known}。` : '使用者還沒回答其他問題。',
     '',
-    '用繁體中文直接回答,幫助使用者想清楚怎麼填這一題,不超過 150 字。',
-    '直接輸出純文字,不要 JSON、不要 markdown。',
+    '回答規則:',
+    '1. 繁體中文,直接務實,幫使用者想清楚怎麼填這一題,不超過 150 字。',
+    '2. 一律輸出單一合法 JSON 物件,不要 markdown code fence,格式:',
+    '{"reply": "你的回覆", "answer": 建議填入的答案}',
+    `3. ${answerRule}`,
+    '4. 資訊不足、沒把握時省略 answer,先在 reply 裡反問使用者。',
   ].join('\n');
 }
 
@@ -98,7 +110,7 @@ export function buildQuestionPrompt({ question, hint, answers }) {
  * misbehaving reply cannot flood the plan.
  */
 export function parseAdvisorReply(text) {
-  const fallback = { reply: text.trim(), tasks: [], goals: [], steps: [] };
+  const fallback = { reply: text.trim(), tasks: [], goals: [], steps: [], answer: null };
   const cleaned = text
     .trim()
     .replace(/^```(?:json)?\s*/i, '')
@@ -132,7 +144,18 @@ export function parseAdvisorReply(text) {
     .slice(0, 5)
     .map((step) => ({ label: step.label }));
 
-  return { reply: parsed.reply, tasks, goals, steps };
+  let answer = null;
+  if (
+    typeof parsed.answer === 'number' &&
+    Number.isFinite(parsed.answer) &&
+    parsed.answer >= 0
+  ) {
+    answer = parsed.answer;
+  } else if (typeof parsed.answer === 'string' && parsed.answer.trim()) {
+    answer = parsed.answer.trim().slice(0, 80);
+  }
+
+  return { reply: parsed.reply, tasks, goals, steps, answer };
 }
 
 /** usage: { date: 'YYYY-MM-DD', count: number } */
@@ -146,6 +169,28 @@ export function recordCall(usage, today) {
     return { date: today, count: 1 };
   }
   return { date: today, count: usage.count + 1 };
+}
+
+/** Trims a stored conversation to the most recent turns. */
+export function capHistory(turns, maxTurns = HISTORY_KEEP_LIMIT) {
+  return turns.length <= maxTurns ? turns : turns.slice(-maxTurns);
+}
+
+/**
+ * Builds the messages array for one call: the most recent real turns
+ * (mock turns carry no API context) followed by the new question.
+ */
+export function buildMessages(history, question, limit = HISTORY_SEND_LIMIT) {
+  const recent = history
+    .filter((turn) => !turn.mock && typeof turn.rawReply === 'string')
+    .slice(-limit);
+  return [
+    ...recent.flatMap((turn) => [
+      { role: 'user', content: turn.question },
+      { role: 'assistant', content: turn.rawReply },
+    ]),
+    { role: 'user', content: question },
+  ];
 }
 
 export function todayKey() {
@@ -188,13 +233,7 @@ export async function askAdvisor({
   }
 
   const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
-  const messages = [
-    ...history.flatMap((turn) => [
-      { role: 'user', content: turn.question },
-      { role: 'assistant', content: turn.rawReply },
-    ]),
-    { role: 'user', content: question },
-  ];
+  const messages = buildMessages(history, question);
 
   const response = await client.messages.create({
     model,

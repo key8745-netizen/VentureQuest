@@ -8,6 +8,7 @@ import OnboardingWizard from './components/OnboardingWizard.jsx';
 import AdvisorPanel from './components/AdvisorPanel.jsx';
 import { createStarterOrgTree } from './models/orgTree.js';
 import { buildStagePlan, getActiveStage } from './models/stagePlanner.js';
+import { capHistory } from './models/advisor.js';
 import { modes, getCopy } from './models/terminology.js';
 import './styles/app.css';
 
@@ -26,6 +27,7 @@ function defaultState() {
     customizations: {},
     breakdowns: {},
     advisorUsage: { date: '', count: 0 },
+    advisorHistories: {},
     orgTree: createStarterOrgTree(),
   };
 }
@@ -73,6 +75,15 @@ function App() {
         },
       };
     });
+  };
+
+  // One persisted conversation per context (stage / goal / wizard
+  // question), trimmed so localStorage stays small.
+  const setAdvisorHistory = (key, turns) => {
+    setState((prev) => ({
+      ...prev,
+      advisorHistories: { ...prev.advisorHistories, [key]: capHistory(turns) },
+    }));
   };
 
   // Attach advisor-suggested sub-items under a goal (or sub-item).
@@ -192,6 +203,8 @@ function App() {
               apiKey={apiKey}
               usage={state.advisorUsage}
               onUsageChange={(advisorUsage) => patch({ advisorUsage })}
+              advisorHistories={state.advisorHistories}
+              onAdvisorHistoryChange={setAdvisorHistory}
             />
             <AdvisorPanel
               apiKey={apiKey}
@@ -209,6 +222,8 @@ function App() {
               onUsageChange={(advisorUsage) => patch({ advisorUsage })}
               onAdoptTask={(stageId, task) => addCustomization(stageId, 'tasks', task)}
               onAdoptGoal={(stageId, goal) => addCustomization(stageId, 'goals', goal)}
+              advisorHistories={state.advisorHistories}
+              onAdvisorHistoryChange={setAdvisorHistory}
             />
             <FinancialPanel
               mode={state.mode}
@@ -227,6 +242,8 @@ function App() {
             apiKey={apiKey}
             usage={state.advisorUsage}
             onUsageChange={(advisorUsage) => patch({ advisorUsage })}
+            advisorHistories={state.advisorHistories}
+            onAdvisorHistoryChange={setAdvisorHistory}
           />
         )}
       </main>

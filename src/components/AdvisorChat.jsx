@@ -8,26 +8,30 @@ import {
 } from '../models/advisor.js';
 
 /**
- * One chat box for the advisor. Used both in the wizard (plain Q&A)
- * and on the dashboard (with adopt buttons for suggested tasks/goals).
+ * One chat box for the advisor. Used in the wizard (plain Q&A), on the
+ * dashboard stage advisor, and next to every goal (with breakdowns).
+ * The conversation itself lives in app state (persisted per context);
+ * adopt flags are stored on each turn so buttons stay disabled after
+ * a reload.
  */
 export default function AdvisorChat({
   apiKey,
   model,
   systemPrompt,
+  history = [],
+  onHistoryChange,
   usage,
   onUsageChange,
   onAdoptTask,
   onAdoptGoal,
   onAdoptSteps,
+  onAdoptAnswer,
   mockReply,
   placeholder,
 }) {
-  const [history, setHistory] = useState([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [adopted, setAdopted] = useState([]);
 
   const handleSend = async () => {
     const question = input.trim();
@@ -46,11 +50,11 @@ export default function AdvisorChat({
         apiKey,
         model,
         systemPrompt,
-        history: history.filter((turn) => !turn.mock),
+        history,
         question,
         ...(mockReply ? { mockReply } : {}),
       });
-      setHistory((prev) => [...prev, { question, ...result }]);
+      onHistoryChange([...history, { question, ...result }]);
       setInput('');
       if (apiKey && !result.mock) {
         onUsageChange(recordCall(usage, today));
@@ -66,10 +70,17 @@ export default function AdvisorChat({
     }
   };
 
-  const adopt = (kind, item, key) => {
-    if (kind === 'task') onAdoptTask(item);
-    else onAdoptGoal(item);
-    setAdopted((prev) => [...prev, key]);
+  const isAdopted = (turn, key) => (turn.adopted ?? []).includes(key);
+
+  const adopt = (turnIndex, key, apply) => {
+    apply();
+    onHistoryChange(
+      history.map((turn, index) =>
+        index === turnIndex
+          ? { ...turn, adopted: [...(turn.adopted ?? []), key] }
+          : turn,
+      ),
+    );
   };
 
   return (
@@ -78,11 +89,25 @@ export default function AdvisorChat({
         <div key={turnIndex} className="advisor-turn">
           <p className="advisor-question">{turn.question}</p>
           <p className="advisor-reply">{turn.reply}</p>
+          {turn.answer != null && onAdoptAnswer && (
+            <ul className="advisor-suggestions">
+              <li>
+                <span>建議答案:{turn.answer}</span>
+                <button
+                  type="button"
+                  className="mini"
+                  onClick={() => adopt(turnIndex, 'a', () => onAdoptAnswer(turn.answer))}
+                >
+                  {isAdopted(turn, 'a') ? '再填一次' : '填入'}
+                </button>
+              </li>
+            </ul>
+          )}
           {turn.steps?.length > 0 && onAdoptSteps && (
             <div className="advisor-steps">
               <ul className="advisor-suggestions">
                 {turn.steps.map((step, i) => (
-                  <li key={`${turnIndex}-s${i}`}>
+                  <li key={`s${i}`}>
                     <span>{i + 1}. {step.label}</span>
                   </li>
                 ))}
@@ -90,13 +115,12 @@ export default function AdvisorChat({
               <button
                 type="button"
                 className="mini"
-                disabled={adopted.includes(`${turnIndex}-steps`)}
-                onClick={() => {
-                  onAdoptSteps(turn.steps);
-                  setAdopted((prev) => [...prev, `${turnIndex}-steps`]);
-                }}
+                disabled={isAdopted(turn, 'steps')}
+                onClick={() =>
+                  adopt(turnIndex, 'steps', () => onAdoptSteps(turn.steps))
+                }
               >
-                {adopted.includes(`${turnIndex}-steps`)
+                {isAdopted(turn, 'steps')
                   ? '已加入為子項目'
                   : `把這 ${turn.steps.length} 步加入為子項目`}
               </button>
@@ -105,7 +129,7 @@ export default function AdvisorChat({
           {(turn.tasks?.length > 0 || turn.goals?.length > 0) && (
             <ul className="advisor-suggestions">
               {turn.tasks?.map((task, i) => {
-                const key = `${turnIndex}-t${i}`;
+                const key = `t${i}`;
                 return (
                   <li key={key}>
                     <span>
@@ -116,17 +140,17 @@ export default function AdvisorChat({
                       <button
                         type="button"
                         className="mini"
-                        disabled={adopted.includes(key)}
-                        onClick={() => adopt('task', task, key)}
+                        disabled={isAdopted(turn, key)}
+                        onClick={() => adopt(turnIndex, key, () => onAdoptTask(task))}
                       >
-                        {adopted.includes(key) ? '已加入' : '加入'}
+                        {isAdopted(turn, key) ? '已加入' : '加入'}
                       </button>
                     )}
                   </li>
                 );
               })}
               {turn.goals?.map((goal, i) => {
-                const key = `${turnIndex}-g${i}`;
+                const key = `g${i}`;
                 return (
                   <li key={key}>
                     <span>過關條件:{goal.label}</span>
@@ -134,10 +158,10 @@ export default function AdvisorChat({
                       <button
                         type="button"
                         className="mini"
-                        disabled={adopted.includes(key)}
-                        onClick={() => adopt('goal', goal, key)}
+                        disabled={isAdopted(turn, key)}
+                        onClick={() => adopt(turnIndex, key, () => onAdoptGoal(goal))}
                       >
-                        {adopted.includes(key) ? '已加入' : '加入'}
+                        {isAdopted(turn, key) ? '已加入' : '加入'}
                       </button>
                     )}
                   </li>

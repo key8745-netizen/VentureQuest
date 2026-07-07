@@ -33,6 +33,8 @@ function GoalItem({
   apiKey,
   usage,
   onUsageChange,
+  advisorHistories,
+  onAdvisorHistoryChange,
 }) {
   const children = breakdowns[goal.id] ?? [];
   const hasChildren = children.length > 0;
@@ -66,6 +68,8 @@ function GoalItem({
           apiKey={apiKey}
           model={pickModelForStage(stage.id)}
           systemPrompt={buildGoalPrompt({ profile, stage, goal, pathLabels })}
+          history={advisorHistories[`goal:${goal.id}`] ?? []}
+          onHistoryChange={(turns) => onAdvisorHistoryChange(`goal:${goal.id}`, turns)}
           usage={usage}
           onUsageChange={onUsageChange}
           onAdoptSteps={(steps) => onAddBreakdown(goal.id, steps)}
@@ -92,6 +96,8 @@ function GoalItem({
               apiKey={apiKey}
               usage={usage}
               onUsageChange={onUsageChange}
+              advisorHistories={advisorHistories}
+              onAdvisorHistoryChange={onAdvisorHistoryChange}
             />
           ))}
         </ul>
@@ -115,6 +121,8 @@ export default function QuestTracker({
   apiKey,
   usage,
   onUsageChange,
+  advisorHistories,
+  onAdvisorHistoryChange,
 }) {
   const [openChatId, setOpenChatId] = useState(null);
 
@@ -216,6 +224,8 @@ export default function QuestTracker({
                       apiKey={apiKey}
                       usage={usage}
                       onUsageChange={onUsageChange}
+                      advisorHistories={advisorHistories}
+                      onAdvisorHistoryChange={onAdvisorHistoryChange}
                     />
                   ))}
                 </ul>

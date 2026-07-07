@@ -9,7 +9,11 @@ import {
   parseAdvisorReply,
   canAskToday,
   recordCall,
+  capHistory,
+  buildMessages,
   DAILY_CALL_LIMIT,
+  HISTORY_KEEP_LIMIT,
+  HISTORY_SEND_LIMIT,
 } from '../src/models/advisor.js';
 
 const profile = {
@@ -49,15 +53,35 @@ test('stage prompt carries the user context and the JSON contract', () => {
   assert.ok(prompt.includes('"tasks"'));
 });
 
-test('question prompt includes the wizard question but no task contract', () => {
+test('question prompt includes the wizard question and the answer contract', () => {
   const prompt = buildQuestionPrompt({
     question: '賣一個收多少錢?',
     hint: '一份餐、一小時服務',
+    type: 'number',
     answers: { idea: '便當店' },
   });
   assert.ok(prompt.includes('賣一個收多少錢'));
   assert.ok(prompt.includes('便當店'));
+  assert.ok(prompt.includes('"answer"'), 'must ask for a fill-in answer');
+  assert.ok(prompt.includes('數字'), 'number questions ask for a numeric answer');
   assert.ok(!prompt.includes('"tasks"'));
+});
+
+test('parses a suggested answer and rejects junk values', () => {
+  const numeric = parseAdvisorReply(JSON.stringify({ reply: 'ok', answer: 35000 }));
+  assert.equal(numeric.answer, 35000);
+
+  const text = parseAdvisorReply(JSON.stringify({ reply: 'ok', answer: '  賣給上班族的健康便當  ' }));
+  assert.equal(text.answer, '賣給上班族的健康便當');
+
+  const negative = parseAdvisorReply(JSON.stringify({ reply: 'ok', answer: -5 }));
+  assert.equal(negative.answer, null);
+
+  const junk = parseAdvisorReply(JSON.stringify({ reply: 'ok', answer: { nested: true } }));
+  assert.equal(junk.answer, null);
+
+  const none = parseAdvisorReply(JSON.stringify({ reply: 'ok' }));
+  assert.equal(none.answer, null);
 });
 
 test('goal prompt carries the goal, its parent path and the steps contract', () => {
@@ -139,4 +163,36 @@ test('daily guardrail blocks calls past the limit and resets next day', () => {
   assert.equal(canAskToday(usage, '2026-07-08'), true);
   usage = recordCall(usage, '2026-07-08');
   assert.equal(usage.count, 1);
+});
+
+test('capHistory keeps only the most recent turns', () => {
+  const turns = Array.from({ length: HISTORY_KEEP_LIMIT + 4 }, (_, i) => ({
+    question: `q${i}`,
+  }));
+  const capped = capHistory(turns);
+  assert.equal(capped.length, HISTORY_KEEP_LIMIT);
+  assert.equal(capped[0].question, 'q4', 'oldest turns are dropped first');
+
+  // Short histories come back unchanged (same reference is fine).
+  const short = [{ question: 'only' }];
+  assert.deepEqual(capHistory(short), short);
+});
+
+test('buildMessages skips mock turns, limits context and ends with the question', () => {
+  const history = [
+    { question: 'mock-q', rawReply: undefined, mock: true, reply: 'x' },
+    ...Array.from({ length: HISTORY_SEND_LIMIT + 3 }, (_, i) => ({
+      question: `q${i}`,
+      rawReply: `a${i}`,
+    })),
+  ];
+  const messages = buildMessages(history, '新問題');
+
+  // send-limit turns * 2 roles + the new question
+  assert.equal(messages.length, HISTORY_SEND_LIMIT * 2 + 1);
+  assert.equal(messages[0].role, 'user');
+  assert.equal(messages[0].content, 'q3', 'only the most recent turns are sent');
+  assert.equal(messages.at(-1).role, 'user');
+  assert.equal(messages.at(-1).content, '新問題');
+  assert.ok(!messages.some((m) => m.content === 'mock-q'), 'mock turns are excluded');
 });
