@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   removeBreakdownItem,
+  getUncelebratedStage,
   buildStagePlan,
   getActiveStage,
   getTodayMicroTasks,
@@ -241,4 +242,45 @@ test('removeBreakdownItem drops the item and its whole subtree', () => {
 
   // Input is never mutated.
   assert.equal(breakdowns['g1'].length, 2);
+});
+
+test('getUncelebratedStage surfaces each cleared stage exactly once', () => {
+  const plan = buildStagePlan({ profile });
+  const exploreGoalIds = plan.stages[0].goals.map((goal) => goal.id);
+
+  // Nothing cleared yet.
+  assert.equal(
+    getUncelebratedStage({ plan, completedGoalIds: [], breakdowns: {}, celebratedStageIds: [] }),
+    null,
+  );
+
+  // Clearing explore surfaces it...
+  const cleared = getUncelebratedStage({
+    plan,
+    completedGoalIds: exploreGoalIds,
+    breakdowns: {},
+    celebratedStageIds: [],
+  });
+  assert.equal(cleared.id, 'explore');
+
+  // ...but only until it has been celebrated.
+  assert.equal(
+    getUncelebratedStage({
+      plan,
+      completedGoalIds: exploreGoalIds,
+      breakdowns: {},
+      celebratedStageIds: ['explore'],
+    }),
+    null,
+  );
+
+  // Breakdowns count: a stage cleared through sub-items surfaces too.
+  const breakdowns = { [exploreGoalIds[0]]: [{ id: 'sub', label: 's' }] };
+  const viaSub = getUncelebratedStage({
+    plan,
+    completedGoalIds: [...exploreGoalIds.slice(1), 'sub'],
+    breakdowns,
+    celebratedStageIds: [],
+  });
+  assert.equal(viaSub.id, 'explore');
 });

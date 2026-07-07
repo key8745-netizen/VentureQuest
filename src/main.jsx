@@ -10,6 +10,7 @@ import { createStarterOrgTree } from './models/orgTree.js';
 import {
   buildStagePlan,
   getActiveStage,
+  getUncelebratedStage,
   removeBreakdownItem,
 } from './models/stagePlanner.js';
 import { capHistory } from './models/advisor.js';
@@ -30,6 +31,7 @@ function defaultState() {
     completedTaskIds: [],
     customizations: {},
     breakdowns: {},
+    celebratedStageIds: [],
     advisorUsage: { date: '', count: 0 },
     advisorHistories: {},
     orgTree: createStarterOrgTree(),
@@ -177,8 +179,62 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
+  const plan = state.profile
+    ? buildStagePlan({
+        profile: state.profile,
+        customizations: state.customizations,
+      })
+    : null;
+  const activeStage = plan
+    ? getActiveStage({
+        plan,
+        completedGoalIds: state.completedGoalIds,
+        breakdowns: state.breakdowns,
+      })
+    : null;
+  const clearedStage = plan
+    ? getUncelebratedStage({
+        plan,
+        completedGoalIds: state.completedGoalIds,
+        breakdowns: state.breakdowns,
+        celebratedStageIds: state.celebratedStageIds,
+      })
+    : null;
+
   return (
     <div className="app">
+      {clearedStage && (
+        <div className="stage-clear-overlay" role="dialog" aria-modal="true">
+          <div className="stage-clear card">
+            <p className="stage-clear-emoji">🎉</p>
+            <h2>
+              {getCopy('stageClearTitle', state.mode)}「{clearedStage.label}」
+            </h2>
+            {activeStage ? (
+              <p>
+                {getCopy('stageClearNext', state.mode)}:
+                <strong>{activeStage.label}</strong> — {activeStage.subtitle}
+              </p>
+            ) : (
+              <p>{getCopy('stageClearAllDone', state.mode)}</p>
+            )}
+            <button
+              type="button"
+              className="primary"
+              onClick={() =>
+                patch({
+                  celebratedStageIds: [
+                    ...state.celebratedStageIds,
+                    clearedStage.id,
+                  ],
+                })
+              }
+            >
+              {getCopy('stageClearContinue', state.mode)}
+            </button>
+          </div>
+        </div>
+      )}
       <header className="app-header">
         <div>
           <h1>VentureQuest 勇闖人生</h1>
@@ -243,14 +299,7 @@ function App() {
               financial={state.financial}
               completedGoalIds={state.completedGoalIds}
               breakdowns={state.breakdowns}
-              activeStage={getActiveStage({
-                plan: buildStagePlan({
-                  profile: state.profile,
-                  customizations: state.customizations,
-                }),
-                completedGoalIds: state.completedGoalIds,
-                breakdowns: state.breakdowns,
-              })}
+              activeStage={activeStage}
               usage={state.advisorUsage}
               onUsageChange={(advisorUsage) => patch({ advisorUsage })}
               onAdoptTask={(stageId, task) => addCustomization(stageId, 'tasks', task)}

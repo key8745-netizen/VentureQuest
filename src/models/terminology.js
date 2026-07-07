@@ -67,6 +67,22 @@ const COPY = {
     pro: '需要協助?諮詢 AI',
     plain: '不知道怎麼填?問 AI',
   },
+  stageClearTitle: {
+    pro: '階段完成',
+    plain: '過關啦!',
+  },
+  stageClearNext: {
+    pro: '下一階段',
+    plain: '下一關',
+  },
+  stageClearAllDone: {
+    pro: '五個階段全部完成,路線圖已走完。',
+    plain: '五關全破!這條路你已經走完了,接下來換你自己寫劇本。',
+  },
+  stageClearContinue: {
+    pro: '繼續',
+    plain: '繼續前進',
+  },
   stageMap: {
     pro: '五階段營運路線圖',
     plain: '你的闖關地圖',
