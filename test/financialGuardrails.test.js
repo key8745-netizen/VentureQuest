@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 
 import {
   calculateSurvivalLine,
+  calculateTargetLine,
   suggestAfterWorkPace,
 } from '../src/models/financialGuardrails.js';
 
@@ -43,4 +44,30 @@ test('suggests a conservative after-work weekly pace', () => {
 
   const overloaded = suggestAfterWorkPace({ weeklyHours: 25, weeklyUnits: 25 });
   assert.equal(overloaded.risk, 'burnout-risk');
+});
+
+test('target line adds the income goal on top of the survival line', () => {
+  const base = { monthlyFixedCost: 30000, unitPrice: 100, unitCost: 55 };
+
+  const target = calculateTargetLine({ ...base, targetMonthlyIncome: 30000 });
+  assert.equal(target.viable, true);
+  // (30000 fixed + 30000 income) / 45 margin = 1334 units
+  assert.equal(target.unitsToTarget, Math.ceil(60000 / 45));
+
+  // Zero income goal degenerates to the survival line.
+  const zero = calculateTargetLine({ ...base, targetMonthlyIncome: 0 });
+  assert.equal(
+    zero.unitsToTarget,
+    calculateSurvivalLine(base).unitsToSurvive,
+  );
+
+  // A losing unit economy stays non-viable.
+  const losing = calculateTargetLine({
+    monthlyFixedCost: 30000,
+    unitPrice: 50,
+    unitCost: 60,
+    targetMonthlyIncome: 10000,
+  });
+  assert.equal(losing.viable, false);
+  assert.equal(losing.unitsToTarget, null);
 });

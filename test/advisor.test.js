@@ -133,6 +133,9 @@ test('goal prompt carries the goal, its parent path and the steps contract', () 
   assert.ok(prompt.includes('開店要具備的技能'));
   assert.ok(prompt.includes('便當店'));
   assert.ok(prompt.includes('"steps"'));
+  // The goal chat may also propose training tasks for missing skills.
+  assert.ok(prompt.includes('"tasks"'));
+  assert.ok(prompt.includes('練習') || prompt.includes('訓練'));
 });
 
 test('parses steps suggestions and caps them at five', () => {

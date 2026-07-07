@@ -33,6 +33,7 @@ function GoalItem({
   onToggle,
   onAddBreakdown,
   onRemoveItem,
+  onAdoptTask,
   apiKey,
   usage,
   onUsageChange,
@@ -103,6 +104,7 @@ function GoalItem({
           usage={usage}
           onUsageChange={onUsageChange}
           onAdoptSteps={(steps) => onAddBreakdown(goal.id, steps)}
+          onAdoptTask={(task) => onAdoptTask(stage.id, task)}
           mockReply={MOCK_GOAL_REPLY}
           placeholder="例如:這個目標怎麼達成?我做不到怎麼辦?"
         />
@@ -126,6 +128,7 @@ function GoalItem({
               onToggle={onToggle}
               onAddBreakdown={onAddBreakdown}
               onRemoveItem={onRemoveItem}
+              onAdoptTask={onAdoptTask}
               apiKey={apiKey}
               usage={usage}
               onUsageChange={onUsageChange}
@@ -153,6 +156,7 @@ export default function QuestTracker({
   onCompletedTaskIdsChange,
   onAddBreakdown,
   onRemoveItem,
+  onAdoptTask,
   apiKey,
   usage,
   onUsageChange,
@@ -259,6 +263,7 @@ export default function QuestTracker({
                       }
                       onAddBreakdown={onAddBreakdown}
                       onRemoveItem={onRemoveItem}
+                      onAdoptTask={onAdoptTask}
                       apiKey={apiKey}
                       usage={usage}
                       onUsageChange={onUsageChange}

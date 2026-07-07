@@ -14,10 +14,11 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 - 引導式問答（onboarding wizard）：一次一題，答完產生計畫；每題可問 AI，顧問可附「建議答案」讓使用者一鍵填入。
 - 五階段路線圖：探索驗證 → 起飛準備 → 落地營運 → 穩定成長 → 規模擴張。每階段有可勾選的過關條件（goals）＋ 5–30 分鐘 micro-tasks。過關瞬間跳一次性慶祝彈窗（記錄在 `celebratedStageIds`，重新整理不重跳）。
 - AI 創業顧問：使用者自備 Anthropic API key（存瀏覽器獨立 key，不隨 Export 匯出），依階段分級選模型（explore/prepare → Haiku、operate/grow → Sonnet、scale → Opus）。顧問可建議新任務／過關條件，使用者按「加入」採用。
-- 目標遞迴拆解：每個過關條件（含子項目）旁有「問 AI」，顧問解釋怎麼達成並可拆成最多 5 個可勾選子項目（存在 `breakdowns`，可無限層遞迴）。有子項目的目標由子項目全勾自動完成，母項目 checkbox 變唯讀。AI 加入的項目（子項目、採用的過關條件）都可用「✕」移除，整個子樹一起清掉；子項目清空後母項目恢復可直接勾選。內建的階段條件不可移除。
+- 目標遞迴拆解：每個過關條件（含子項目）旁有「問 AI」，顧問解釋怎麼達成、可拆成最多 5 個可勾選子項目，缺技能／資格時還可給最多 3 個 5–30 分鐘的訓練任務（採用後進該階段的每日任務輪替）（存在 `breakdowns`，可無限層遞迴）。有子項目的目標由子項目全勾自動完成，母項目 checkbox 變唯讀。AI 加入的項目（子項目、採用的過關條件）都可用「✕」移除，整個子樹一起清掉；子項目清空後母項目恢復可直接勾選。內建的階段條件不可移除。
 - AI 成本防護欄（已寫死在 `advisor.js`）：每日 20 次呼叫上限、單次回覆 1024 tokens、無 key 時 fallback 到寫死的 mock 回覆。
 - 專業術語 / 街頭白話切換。
-- 財務生死線：每月固定成本、單位售價、單位變動成本、最低單量。
+- 財務生死線：每月固定成本、單位售價、單位變動成本、最低單量；另顯示目標線（要賺到目標月收入每月要賣幾個）。
+- 每週回顧：每 ISO 週記一筆實際投入時數／賣出單位／心得（`weeklyReviews`，同週覆寫、最多留 12 週），對照生死線週配額並提示過勞風險。
 - 今日 micro-task：依照今天可用分鐘數，只顯示一個可以做的小任務。
 - 產業無感 schema：底層只用 `productId`、單位經濟、抽象 operating nodes；使用者的產業只存在 `profile.idea` 這個字串。
 - 最小 Org-Tree：可複製節點、解鎖管理節點。
@@ -154,6 +155,7 @@ App shell 與跨區塊狀態：
 - `OnboardingWizard.jsx`：一次一題的引導問答＋每題「問 AI」＋計畫摘要。
 - `QuestTracker.jsx`：五階段地圖、過關條件勾選、progress bar、單一 micro-task。
 - `AdvisorPanel.jsx`：API key 管理＋目前階段的顧問對話。
+- `WeeklyReview.jsx`：每週回顧表單與生死線週配額對照。
 - `AdvisorChat.jsx`：共用聊天元件（精靈與儀表板都用），含「加入」建議按鈕。
 - `FinancialPanel.jsx`：財務生死線輸入與判定。
 - `OrgTreePreview.jsx`：Org-Tree 顯示、複製節點、解鎖管理節點。
@@ -163,6 +165,7 @@ App shell 與跨區塊狀態：
 核心財務邏輯：
 
 - `calculateSurvivalLine({ monthlyFixedCost, unitPrice, unitCost })`
+- `calculateTargetLine({ ..., targetMonthlyIncome })`：目標收入所需單量。
 - `suggestAfterWorkPace({ weeklyHours, weeklyUnits })`
 
 設計原則：只看單位經濟，不看產業。
@@ -197,6 +200,13 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 - `capHistory` / `buildMessages`：每個對話最多存 10 輪；呼叫 API 只帶最近 6 輪真實對話（mock 不算）。
 - `askAdvisor({...})`：真正的 API 呼叫；無 key 回傳寫死 mock。
 
+### `src/models/weeklyReview.js`
+
+每週回顧:
+
+- `getWeekLabel(date)`:ISO 週標籤(例 `2026-W28`)。
+- `upsertReview(reviews, entry)`:同週覆寫、最多留 12 週。
+
 ### `src/models/orgTree.js`
 
 產業無感組織節點：
@@ -223,7 +233,7 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
 ## 5. 測試狀態
 
-目前測試覆蓋（35/35 pass）：
+目前測試覆蓋（38/38 pass）：
 
 - 財務生死線、虧錢模型拒絕、在職節奏風險判斷。
 - 引導問答：題目順序、答案驗證、profile 產生（含探索分支與 schema 檢查）。
@@ -268,6 +278,9 @@ npm test
 - [x] 白話／專業切換覆蓋顧問、精靈、拆解等新 UI。
 - [x] AI 加入的子項目與過關條件可移除（含子樹遞迴清除）。
 - [x] 過關一次性慶祝彈窗。
+- [x] 生死線↔目標收入連動（目標線）。
+- [x] 目標拆解可給訓練任務（缺技能／證照時進每日任務）。
+- [x] 每週回顧儀式。
 
 ### P2
 
