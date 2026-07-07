@@ -30,6 +30,36 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 - 不要串 AI API，除非先有 token/cost guardrail。
 - 不要把任何產業詞寫進底層 schema，例如 `foodCost`、`menuItem`、`roomNight`。
 
+## 1.5 佈署狀態
+
+- 佈署平台：Netlify（`netlify.toml` 已在 repo 根目錄：Node 22、`npm run build`、發佈 `dist/`）。
+- 連接方式：Netlify → Add new site → Import an existing project → 選 `key8745-netizen/VentureQuest`，之後每次 push `main` 自動佈署。
+- 沒有其他基礎設施：無網域、無環境變數、無 serverless functions。
+
+## 1.6 給接手模型的任務分級
+
+這個 repo 的架構刻意簡單，大多數後續任務**不需要高階模型**。開新 session 前先看這裡：
+
+**適合 Haiku / 低階模型（機械性、範圍明確）：**
+
+- 改文案、加 `terminology.js` 的詞條（記得 PRO/PLAIN 兩種都要寫）。
+- 加更多 micro-task 模板到 `goalPlanner.js` 的 `MILESTONE_TEMPLATES`（每個任務 5–30 分鐘，先補測試）。
+- 調 CSS、改配色、微調手機版排版。
+- 修 typo、更新文件。
+
+**適合 Sonnet（一般開發）：**
+
+- 新增小功能（例如 import JSON 還原狀態，對應現有的 Export）。
+- 重構單一 component、加測試案例。
+- 修 bug、處理 build 或依賴問題。
+
+**才需要高階模型（動架構才用）：**
+
+- 引入 AI API（必須先設計 token/cost guardrail）。
+- 大改資料 schema 或狀態管理方式。
+
+**所有模型都必須遵守第 6 節的開發守則**，特別是：不加後端、不把產業字眼寫進 schema、tests-first。
+
 ## 2. 技術狀態
 
 - Framework: React 18 + Vite 5 SPA。
