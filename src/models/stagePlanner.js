@@ -224,6 +224,25 @@ export function toggleId(ids, id) {
   return [...ids, id];
 }
 
+/**
+ * The first fully-cleared stage the user has not been congratulated
+ * for yet — drives the one-time stage-clear banner.
+ */
+export function getUncelebratedStage({
+  plan,
+  completedGoalIds,
+  breakdowns = {},
+  celebratedStageIds = [],
+}) {
+  return (
+    plan.stages.find(
+      (stage) =>
+        !celebratedStageIds.includes(stage.id) &&
+        isStageComplete(stage, completedGoalIds, breakdowns),
+    ) ?? null
+  );
+}
+
 /** Overall progress counts stage goals — they are the real milestones. */
 export function calculatePlanProgress({ plan, completedGoalIds, breakdowns = {} }) {
   const allGoals = plan.stages.flatMap((stage) => stage.goals);

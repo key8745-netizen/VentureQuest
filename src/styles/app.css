@@ -483,6 +483,36 @@ button.mini {
   margin: 6px 0 0;
 }
 
+.stage-clear-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(35, 33, 28, 0.55);
+}
+
+.stage-clear {
+  max-width: 360px;
+  width: 100%;
+  text-align: center;
+  margin-bottom: 0;
+}
+
+.stage-clear-emoji {
+  font-size: 2.4rem;
+  margin: 0;
+}
+
+.stage-clear .primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  margin-top: 8px;
+}
+
 .app-footer {
   text-align: center;
   color: var(--muted);
