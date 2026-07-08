@@ -160,7 +160,7 @@ export default function OnboardingWizard({
         <AdvisorChat
           key={question.id}
           apiKey={apiKey}
-          model={pickModelForStage('explore')}
+          model={pickModelForStage('explore', apiKey)}
           systemPrompt={buildQuestionPrompt({
             question: question.question,
             hint: question.hint,

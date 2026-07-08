@@ -134,7 +134,7 @@ export default function WeeklyReview({
           <AdvisorChat
             key={activeStage.id}
             apiKey={apiKey}
-            model={pickModelForStage(activeStage.id)}
+            model={pickModelForStage(activeStage.id, apiKey)}
             systemPrompt={buildDiagnosisPrompt({
               profile,
               stage: activeStage,

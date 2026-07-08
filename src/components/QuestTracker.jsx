@@ -100,7 +100,7 @@ function GoalItem({
         <AdvisorChat
           key={goal.id}
           apiKey={apiKey}
-          model={pickModelForStage(stage.id)}
+          model={pickModelForStage(stage.id, apiKey)}
           systemPrompt={buildGoalPrompt({ profile, stage, goal, pathLabels, financial })}
           history={advisorHistories[`goal:${goal.id}`] ?? []}
           onHistoryChange={(turns) => onAdvisorHistoryChange(`goal:${goal.id}`, turns)}
