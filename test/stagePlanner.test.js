@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   removeBreakdownItem,
   getUncelebratedStage,
+  pickRotatingTask,
   buildStagePlan,
   getActiveStage,
   getTodayMicroTasks,
@@ -283,4 +284,12 @@ test('getUncelebratedStage surfaces each cleared stage exactly once', () => {
     celebratedStageIds: [],
   });
   assert.equal(viaSub.id, 'explore');
+});
+
+test('pickRotatingTask cycles through the fitting tasks', () => {
+  const tasks = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+  assert.equal(pickRotatingTask(tasks, 0).id, 'a');
+  assert.equal(pickRotatingTask(tasks, 1).id, 'b');
+  assert.equal(pickRotatingTask(tasks, 3).id, 'a', 'rotation wraps around');
+  assert.equal(pickRotatingTask([], 5), null);
 });

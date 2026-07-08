@@ -3,6 +3,7 @@ import {
   buildStagePlan,
   getActiveStage,
   getTodayMicroTasks,
+  pickRotatingTask,
   toggleId,
   calculatePlanProgress,
   isGoalComplete,
@@ -149,9 +150,11 @@ export default function QuestTracker({
   customizations,
   breakdowns,
   availableMinutes,
+  taskRotation,
   completedGoalIds,
   completedTaskIds,
   onAvailableMinutesChange,
+  onTaskRotationChange,
   onCompletedGoalIdsChange,
   onCompletedTaskIdsChange,
   onAddBreakdown,
@@ -175,8 +178,12 @@ export default function QuestTracker({
     availableMinutes,
     breakdowns,
   });
-  // One small win per day beats a backlog: show a single task.
-  const todayTask = todayTasks[0] ?? null;
+  // One small win per day beats a backlog: show a single task, but
+  // let the user rotate when today's pick doesn't fit today.
+  const todayTask = pickRotatingTask(todayTasks, taskRotation);
+  const stageDoneCount = activeStage
+    ? activeStage.tasks.filter((task) => completedTaskIds.includes(task.id)).length
+    : 0;
 
   return (
     <section className="card">
@@ -205,19 +212,34 @@ export default function QuestTracker({
 
       <h3>{getCopy('todayMicroTask', mode)}</h3>
       {todayTask ? (
-        <label className="micro-task">
-          <input
-            type="checkbox"
-            checked={completedTaskIds.includes(todayTask.id)}
-            onChange={() =>
-              onCompletedTaskIdsChange(toggleId(completedTaskIds, todayTask.id))
-            }
-          />
-          <span>
-            {todayTask.label}
-            <em>（約 {todayTask.minutes} 分鐘）</em>
-          </span>
-        </label>
+        <>
+          <label className="micro-task">
+            <input
+              type="checkbox"
+              checked={completedTaskIds.includes(todayTask.id)}
+              onChange={() =>
+                onCompletedTaskIdsChange(toggleId(completedTaskIds, todayTask.id))
+              }
+            />
+            <span>
+              {todayTask.label}
+              <em>（約 {todayTask.minutes} 分鐘）</em>
+            </span>
+          </label>
+          <p className="task-meta muted">
+            {activeStage &&
+              `本階段任務 ${stageDoneCount} / ${activeStage.tasks.length}。`}
+            {todayTasks.length > 1 && (
+              <button
+                type="button"
+                className="mini"
+                onClick={() => onTaskRotationChange(taskRotation + 1)}
+              >
+                換一個（還有 {todayTasks.length - 1} 個可選）
+              </button>
+            )}
+          </p>
+        </>
       ) : (
         <p className="muted">
           {activeStage ? getCopy('noTaskFitsToday', mode) : '所有階段都完成了。'}
