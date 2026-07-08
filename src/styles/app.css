@@ -441,6 +441,12 @@ button.mini {
   color: var(--muted);
 }
 
+.streak {
+  font-size: 0.8rem;
+  font-weight: 400;
+  color: var(--muted);
+}
+
 .task-meta {
   display: flex;
   align-items: center;

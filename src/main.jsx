@@ -14,7 +14,9 @@ import {
   getUncelebratedStage,
   removeBreakdownItem,
 } from './models/stagePlanner.js';
-import { capHistory } from './models/advisor.js';
+import { capHistory, todayKey } from './models/advisor.js';
+import { bumpTaskLog } from './models/momentum.js';
+import { toggleId } from './models/stagePlanner.js';
 import { modes, getCopy } from './models/terminology.js';
 import './styles/app.css';
 
@@ -29,6 +31,7 @@ function defaultState() {
     financial: { monthlyFixedCost: 30000, unitPrice: 500, unitCost: 200 },
     availableMinutes: 20,
     taskRotation: 0,
+    taskLog: {},
     completedGoalIds: [],
     completedTaskIds: [],
     customizations: {},
@@ -144,6 +147,19 @@ function App() {
             [kind]: [...(existing[kind] ?? []), { ...item, id }],
           },
         },
+      };
+    });
+  };
+
+  // Toggling today's task also bumps the per-day completion log that
+  // feeds the streak counter.
+  const handleToggleTask = (taskId) => {
+    setState((prev) => {
+      const wasChecked = prev.completedTaskIds.includes(taskId);
+      return {
+        ...prev,
+        completedTaskIds: toggleId(prev.completedTaskIds, taskId),
+        taskLog: bumpTaskLog(prev.taskLog, todayKey(), wasChecked ? -1 : 1),
       };
     });
   };
@@ -352,10 +368,11 @@ function App() {
               taskRotation={state.taskRotation}
               completedGoalIds={state.completedGoalIds}
               completedTaskIds={state.completedTaskIds}
+              taskLog={state.taskLog}
               onAvailableMinutesChange={(availableMinutes) => patch({ availableMinutes })}
               onTaskRotationChange={(taskRotation) => patch({ taskRotation })}
               onCompletedGoalIdsChange={(completedGoalIds) => patch({ completedGoalIds })}
-              onCompletedTaskIdsChange={(completedTaskIds) => patch({ completedTaskIds })}
+              onToggleTask={handleToggleTask}
               onAddBreakdown={addBreakdownItems}
               onRemoveItem={handleRemoveItem}
               onAdoptTask={(stageId, task) => addCustomization(stageId, 'tasks', task)}
@@ -406,6 +423,7 @@ function App() {
             />
             <OrgTreePreview
               mode={state.mode}
+              activeStageId={activeStage?.id ?? null}
               tree={state.orgTree}
               onTreeChange={(orgTree) => patch({ orgTree })}
             />
