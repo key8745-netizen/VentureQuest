@@ -34,7 +34,14 @@ function TreeNode({ tree, node, onCloneUnit }) {
   );
 }
 
-export default function OrgTreePreview({ mode, tree, onTreeChange }) {
+export default function OrgTreePreview({ mode, activeStageId, tree, onTreeChange }) {
+  const stageHint =
+    activeStageId === 'scale'
+      ? '就是現在:複製你的營運單位開第二個據點,兩個以上就能解鎖管理層。'
+      : activeStageId
+        ? '這是你事業的藍圖預覽——到第 5 關「規模擴張」時,會在這裡複製第二個營運單位、解鎖管理層。'
+        : '';
+
   const roots = Object.values(tree.nodes).filter((node) => node.parentId === null);
   const hasManagement = Object.values(tree.nodes).some(
     (node) => node.type === 'management-layer',
@@ -52,6 +59,7 @@ export default function OrgTreePreview({ mode, tree, onTreeChange }) {
   return (
     <section className="card">
       <h2>{getCopy('orgTree', mode)}</h2>
+      {stageHint && <p className="muted">{stageHint}</p>}
 
       <ul className="org-tree">
         {roots.map((node) => (

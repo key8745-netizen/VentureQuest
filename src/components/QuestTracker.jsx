@@ -13,8 +13,10 @@ import AdvisorChat from './AdvisorChat.jsx';
 import {
   buildGoalPrompt,
   pickModelForStage,
+  todayKey,
   MOCK_GOAL_REPLY,
 } from '../models/advisor.js';
+import { computeStreak } from '../models/momentum.js';
 
 /**
  * One goal (or sub-item) row: checkbox, its own "ask AI" chat that can
@@ -153,10 +155,11 @@ export default function QuestTracker({
   taskRotation,
   completedGoalIds,
   completedTaskIds,
+  taskLog,
   onAvailableMinutesChange,
   onTaskRotationChange,
   onCompletedGoalIdsChange,
-  onCompletedTaskIdsChange,
+  onToggleTask,
   onAddBreakdown,
   onRemoveItem,
   onAdoptTask,
@@ -184,6 +187,7 @@ export default function QuestTracker({
   const stageDoneCount = activeStage
     ? activeStage.tasks.filter((task) => completedTaskIds.includes(task.id)).length
     : 0;
+  const { streak, doneToday } = computeStreak(taskLog ?? {}, todayKey());
 
   return (
     <section className="card">
@@ -210,16 +214,21 @@ export default function QuestTracker({
         {activeStage ? ` — 目前：${activeStage.label}` : ' — 全部完成 🎉'}
       </p>
 
-      <h3>{getCopy('todayMicroTask', mode)}</h3>
+      <h3>
+        {getCopy('todayMicroTask', mode)}
+        {streak > 0 && (
+          <span className="streak">
+            {' '}🔥 連續 {streak} 天{doneToday ? '' : '(今天還沒)'}
+          </span>
+        )}
+      </h3>
       {todayTask ? (
         <>
           <label className="micro-task">
             <input
               type="checkbox"
               checked={completedTaskIds.includes(todayTask.id)}
-              onChange={() =>
-                onCompletedTaskIdsChange(toggleId(completedTaskIds, todayTask.id))
-              }
+              onChange={() => onToggleTask(todayTask.id)}
             />
             <span>
               {todayTask.label}
