@@ -386,6 +386,17 @@ function App() {
               financial={state.financial}
               reviews={state.weeklyReviews}
               onReviewsChange={(weeklyReviews) => patch({ weeklyReviews })}
+              profile={state.profile}
+              activeStage={activeStage}
+              completedGoalIds={state.completedGoalIds}
+              breakdowns={state.breakdowns}
+              apiKey={apiKey}
+              usage={state.advisorUsage}
+              onUsageChange={(advisorUsage) => patch({ advisorUsage })}
+              onAdoptTask={(stageId, task) => addCustomization(stageId, 'tasks', task)}
+              onAdoptGoal={(stageId, goal) => addCustomization(stageId, 'goals', goal)}
+              advisorHistories={state.advisorHistories}
+              onAdvisorHistoryChange={setAdvisorHistory}
             />
             <FinancialPanel
               mode={state.mode}

@@ -5,13 +5,35 @@ import {
   suggestAfterWorkPace,
 } from '../models/financialGuardrails.js';
 import { getCopy } from '../models/terminology.js';
+import AdvisorChat from './AdvisorChat.jsx';
+import {
+  buildDiagnosisPrompt,
+  pickModelForStage,
+  MOCK_DIAGNOSIS_REPLY,
+} from '../models/advisor.js';
 
 /**
  * Once-a-week honesty ritual: log the hours actually spent and units
  * actually sold, compared against the weekly slice of the survival
  * line. One entry per ISO week; editing the same week overwrites.
  */
-export default function WeeklyReview({ mode, financial, reviews, onReviewsChange }) {
+export default function WeeklyReview({
+  mode,
+  financial,
+  reviews,
+  onReviewsChange,
+  profile,
+  activeStage,
+  completedGoalIds,
+  breakdowns,
+  apiKey,
+  usage,
+  onUsageChange,
+  onAdoptTask,
+  onAdoptGoal,
+  advisorHistories,
+  onAdvisorHistoryChange,
+}) {
   const week = getWeekLabel();
   const current = reviews.find((review) => review.week === week);
 
@@ -101,6 +123,41 @@ export default function WeeklyReview({ mode, financial, reviews, onReviewsChange
             <p>這週投入偏多，小心過勞——可持續比衝刺重要。</p>
           )}
         </div>
+      )}
+
+      {current && activeStage && (
+        <>
+          <h3>顧問導航</h3>
+          <p className="muted">
+            記完這週後,讓顧問看你的實際數字診斷有沒有走偏,並規劃下週怎麼走回階段目標。
+          </p>
+          <AdvisorChat
+            key={activeStage.id}
+            apiKey={apiKey}
+            model={pickModelForStage(activeStage.id)}
+            systemPrompt={buildDiagnosisPrompt({
+              profile,
+              stage: activeStage,
+              financial,
+              completedGoalIds,
+              breakdowns,
+              weeklyNeed,
+              reviews,
+            })}
+            history={advisorHistories['review'] ?? []}
+            onHistoryChange={(turns) => onAdvisorHistoryChange('review', turns)}
+            usage={usage}
+            onUsageChange={onUsageChange}
+            onAdoptTask={(task) => onAdoptTask(activeStage.id, task)}
+            onAdoptGoal={(goal) => onAdoptGoal(activeStage.id, goal)}
+            quickAsk={{
+              label: `診斷 ${week}:我走偏了嗎?下週怎麼走?`,
+              question: `幫我診斷 ${week} 這週的狀況:我有沒有偏離「${activeStage.label}」的階段目標?下週該把重心放在哪裡?`,
+            }}
+            mockReply={MOCK_DIAGNOSIS_REPLY}
+            placeholder="也可以自己問,例如:我一直卡在找客人…"
+          />
+        </>
       )}
 
       {past.length > 0 && (
