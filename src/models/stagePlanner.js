@@ -216,6 +216,15 @@ export function removeBreakdownItem(breakdowns, itemId) {
   return next;
 }
 
+/**
+ * Still one task per day — but the user can rotate to the next fitting
+ * one when today's pick does not suit today.
+ */
+export function pickRotatingTask(tasks, rotation) {
+  if (tasks.length === 0) return null;
+  return tasks[((rotation % tasks.length) + tasks.length) % tasks.length];
+}
+
 /** Returns a new array with the id toggled; never mutates the input. */
 export function toggleId(ids, id) {
   if (ids.includes(id)) {

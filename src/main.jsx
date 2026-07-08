@@ -28,6 +28,7 @@ function defaultState() {
     profile: null,
     financial: { monthlyFixedCost: 30000, unitPrice: 500, unitCost: 200 },
     availableMinutes: 20,
+    taskRotation: 0,
     completedGoalIds: [],
     completedTaskIds: [],
     customizations: {},
@@ -348,9 +349,11 @@ function App() {
               customizations={state.customizations}
               breakdowns={state.breakdowns}
               availableMinutes={state.availableMinutes}
+              taskRotation={state.taskRotation}
               completedGoalIds={state.completedGoalIds}
               completedTaskIds={state.completedTaskIds}
               onAvailableMinutesChange={(availableMinutes) => patch({ availableMinutes })}
+              onTaskRotationChange={(taskRotation) => patch({ taskRotation })}
               onCompletedGoalIdsChange={(completedGoalIds) => patch({ completedGoalIds })}
               onCompletedTaskIdsChange={(completedTaskIds) => patch({ completedTaskIds })}
               onAddBreakdown={addBreakdownItems}

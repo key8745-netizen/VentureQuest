@@ -433,6 +433,17 @@ button.mini {
   color: var(--muted);
 }
 
+.task-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 0;
+}
+
+.task-meta .mini {
+  margin-left: 0;
+}
+
 .muted {
   color: var(--muted);
   font-size: 0.85rem;
