@@ -5,6 +5,7 @@ import {
   pickModelForStage,
   buildStagePrompt,
   detectProvider,
+  sanitizeApiKey,
   DAILY_CALL_LIMIT,
 } from '../models/advisor.js';
 
@@ -89,7 +90,7 @@ export default function AdvisorPanel({
           <button
             type="button"
             onClick={() => {
-              onApiKeyChange(keyDraft.trim());
+              onApiKeyChange(sanitizeApiKey(keyDraft));
               setKeyDraft('');
               setShowKeyForm(false);
             }}

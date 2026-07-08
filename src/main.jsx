@@ -14,7 +14,7 @@ import {
   getUncelebratedStage,
   removeBreakdownItem,
 } from './models/stagePlanner.js';
-import { capHistory, todayKey } from './models/advisor.js';
+import { capHistory, todayKey, sanitizeApiKey } from './models/advisor.js';
 import { bumpTaskLog } from './models/momentum.js';
 import { toggleId } from './models/stagePlanner.js';
 import { modes, getCopy } from './models/terminology.js';
@@ -118,8 +118,8 @@ class AppErrorBoundary extends Component {
 function App() {
   const [state, setState] = useState(loadState);
   const [editingProfile, setEditingProfile] = useState(false);
-  const [apiKey, setApiKey] = useState(
-    () => localStorage.getItem(API_KEY_STORAGE) ?? '',
+  const [apiKey, setApiKey] = useState(() =>
+    sanitizeApiKey(localStorage.getItem(API_KEY_STORAGE)),
   );
   const importRef = useRef(null);
 
