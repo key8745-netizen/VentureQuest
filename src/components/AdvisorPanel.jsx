@@ -20,6 +20,7 @@ const MODEL_LABELS = {
 
 export default function AdvisorPanel({
   mode,
+  dossier,
   apiKey,
   onApiKeyChange,
   profile,
@@ -56,6 +57,7 @@ export default function AdvisorPanel({
     financial,
     completedGoalIds,
     breakdowns,
+    dossier,
   });
 
   return (
@@ -110,6 +112,13 @@ export default function AdvisorPanel({
             設定 API key
           </button>
         </p>
+      )}
+
+      {dossier && (
+        <details className="dossier-view">
+          <summary className="muted">查看顧問看到的完整狀態</summary>
+          <pre>{dossier}</pre>
+        </details>
       )}
 
       <AdvisorChat

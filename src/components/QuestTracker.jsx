@@ -42,6 +42,7 @@ function GoalItem({
   onUsageChange,
   advisorHistories,
   onAdvisorHistoryChange,
+  dossier,
 }) {
   const children = breakdowns[goal.id] ?? [];
   const hasChildren = children.length > 0;
@@ -101,7 +102,7 @@ function GoalItem({
           key={goal.id}
           apiKey={apiKey}
           model={pickModelForStage(stage.id, apiKey)}
-          systemPrompt={buildGoalPrompt({ profile, stage, goal, pathLabels, financial })}
+          systemPrompt={buildGoalPrompt({ profile, stage, goal, pathLabels, financial, dossier })}
           history={advisorHistories[`goal:${goal.id}`] ?? []}
           onHistoryChange={(turns) => onAdvisorHistoryChange(`goal:${goal.id}`, turns)}
           usage={usage}
@@ -137,6 +138,7 @@ function GoalItem({
               onUsageChange={onUsageChange}
               advisorHistories={advisorHistories}
               onAdvisorHistoryChange={onAdvisorHistoryChange}
+              dossier={dossier}
             />
           ))}
         </ul>
@@ -168,6 +170,7 @@ export default function QuestTracker({
   onUsageChange,
   advisorHistories,
   onAdvisorHistoryChange,
+  dossier,
 }) {
   const [openChatId, setOpenChatId] = useState(null);
 
@@ -300,6 +303,7 @@ export default function QuestTracker({
                       onUsageChange={onUsageChange}
                       advisorHistories={advisorHistories}
                       onAdvisorHistoryChange={onAdvisorHistoryChange}
+                      dossier={dossier}
                     />
                   ))}
                 </ul>

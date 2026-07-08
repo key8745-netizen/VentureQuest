@@ -14,7 +14,12 @@ import {
   getUncelebratedStage,
   removeBreakdownItem,
 } from './models/stagePlanner.js';
-import { capHistory, todayKey, sanitizeApiKey } from './models/advisor.js';
+import {
+  capHistory,
+  todayKey,
+  sanitizeApiKey,
+  buildDossier,
+} from './models/advisor.js';
 import { bumpTaskLog } from './models/momentum.js';
 import { toggleId } from './models/stagePlanner.js';
 import { modes, getCopy } from './models/terminology.js';
@@ -282,6 +287,17 @@ function App() {
         celebratedStageIds: state.celebratedStageIds,
       })
     : null;
+  const dossier = plan
+    ? buildDossier({
+        profile: state.profile,
+        financial: state.financial,
+        plan,
+        completedGoalIds: state.completedGoalIds,
+        breakdowns: state.breakdowns,
+        taskLog: state.taskLog,
+        weeklyReviews: state.weeklyReviews,
+      })
+    : null;
 
   return (
     <div className="app">
@@ -381,9 +397,11 @@ function App() {
               onUsageChange={(advisorUsage) => patch({ advisorUsage })}
               advisorHistories={state.advisorHistories}
               onAdvisorHistoryChange={setAdvisorHistory}
+              dossier={dossier}
             />
             <AdvisorPanel
               mode={state.mode}
+              dossier={dossier}
               apiKey={apiKey}
               onApiKeyChange={setApiKey}
               profile={state.profile}
