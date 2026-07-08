@@ -16,6 +16,7 @@ import {
   detectProvider,
   buildGeminiPayload,
   sanitizeApiKey,
+  buildDossier,
   DAILY_CALL_LIMIT,
   HISTORY_KEEP_LIMIT,
   HISTORY_SEND_LIMIT,
@@ -333,4 +334,46 @@ test('sanitizeApiKey strips invisible and non-ASCII characters', () => {
   assert.equal(sanitizeApiKey(null), '');
   // After sanitizing, provider detection works again.
   assert.equal(detectProvider(sanitizeApiKey('\u200bAIzaSyabc')), 'gemini');
+});
+
+test('the dossier assembles the complete user state for the advisor', () => {
+  const plan = {
+    stages: [
+      { id: 's1', label: '探索驗證', goals: [{ id: 'g1', label: 'a' }] },
+      { id: 's2', label: '起飛準備', goals: [{ id: 'g2', label: 'b' }] },
+    ],
+  };
+  const dossier = buildDossier({
+    profile,
+    financial: { monthlyFixedCost: 30000, unitPrice: 100, unitCost: 55 },
+    plan,
+    completedGoalIds: ['g1'],
+    breakdowns: {},
+    taskLog: { '2026-07-07': 2, '2026-07-08': 1 },
+    weeklyReviews: [{ week: '2026-W28', hours: 6, units: 20, note: '客人太少' }],
+    today: '2026-07-08',
+  });
+
+  assert.ok(dossier.includes('便當店'));
+  assert.ok(dossier.includes('667'), 'survival line units');
+  assert.ok(dossier.includes('1334'), 'target line units');
+  assert.ok(dossier.includes('已完成階段:探索驗證'));
+  assert.ok(dossier.includes('目前階段:「起飛準備」'));
+  assert.ok(dossier.includes('累計完成 3 件'));
+  assert.ok(dossier.includes('連續 2 天'));
+  assert.ok(dossier.includes('2026-W28'));
+  assert.ok(dossier.includes('客人太少'));
+});
+
+test('stage and goal prompts embed the dossier when provided', () => {
+  const dossier = '【使用者完整狀態】\n測試狀態內容';
+  const stagePrompt = buildStagePrompt({ profile, stage, dossier });
+  assert.ok(stagePrompt.includes('【使用者完整狀態】'));
+  const goalPrompt = buildGoalPrompt({
+    profile,
+    stage,
+    goal: { id: 'x', label: 'y' },
+    dossier,
+  });
+  assert.ok(goalPrompt.includes('測試狀態內容'));
 });

@@ -9,7 +9,16 @@
 //   - without an API key the app falls back to a canned mock reply
 
 import Anthropic from '@anthropic-ai/sdk';
-import { isGoalComplete } from './stagePlanner.js';
+import {
+  isGoalComplete,
+  calculatePlanProgress,
+  getActiveStage,
+} from './stagePlanner.js';
+import {
+  calculateSurvivalLine,
+  calculateTargetLine,
+} from './financialGuardrails.js';
+import { computeStreak } from './momentum.js';
 
 export const DAILY_CALL_LIMIT = 20;
 export const MAX_REPLY_TOKENS = 1024;
@@ -92,6 +101,70 @@ function describeGoalStatus(stage, completedGoalIds, breakdowns) {
     .join(';');
 }
 
+const EMPLOYMENT_LABELS = {
+  employed: '還在上班(全職)',
+  flexible: '兼職/工時彈性',
+  left: '已離開正職',
+};
+
+/**
+ * The user's complete, always-current state file — everything the
+ * advisor should read before judging: direction, live unit economics,
+ * journey progress, execution momentum, and actual weekly numbers.
+ * Prepended to the stage and goal prompts (the diagnosis prompt keeps
+ * its own review-focused structure).
+ */
+export function buildDossier({
+  profile,
+  financial,
+  plan,
+  completedGoalIds,
+  breakdowns = {},
+  taskLog = {},
+  weeklyReviews = [],
+  today = todayKey(),
+}) {
+  const survival = calculateSurvivalLine(financial);
+  const target = calculateTargetLine({
+    ...financial,
+    targetMonthlyIncome: profile.targetMonthlyIncome,
+  });
+  const progress = calculatePlanProgress({ plan, completedGoalIds, breakdowns });
+  const active = getActiveStage({ plan, completedGoalIds, breakdowns });
+  const doneStages = plan.stages
+    .filter(
+      (stage) =>
+        stage.id !== active?.id &&
+        stage.goals.every((goal) =>
+          isGoalComplete({ goalId: goal.id, completedGoalIds, breakdowns }),
+        ),
+    )
+    .map((stage) => stage.label);
+  const { streak, doneToday } = computeStreak(taskLog, today);
+  const totalTasksDone = Object.values(taskLog).reduce((sum, n) => sum + n, 0);
+  const recentReviews = weeklyReviews
+    .slice(-4)
+    .reverse()
+    .map(
+      (review) =>
+        `${review.week}:投入 ${review.hours} 小時、賣出 ${review.units} 個` +
+        (review.note ? `,心得:${review.note}` : ''),
+    );
+
+  return [
+    '【使用者完整狀態】',
+    `事業方向:「${profile.idea || '還在探索方向'}」;工作狀態:${EMPLOYMENT_LABELS[profile.employment] ?? profile.employment};每週可投入 ${profile.weeklyHours} 小時;目標月收入 ${profile.targetMonthlyIncome} 元。`,
+    `財務:每月固定成本 ${financial.monthlyFixedCost} 元、單位售價 ${financial.unitPrice} 元、單位變動成本 ${financial.unitCost} 元;` +
+      (survival.viable
+        ? `生死線每月 ${survival.unitsToSurvive} 個、目標線每月 ${target.unitsToTarget} 個。`
+        : '目前單位經濟是虧損的(賣一個賠一個),需優先修正。'),
+    `旅程:整體過關條件達成 ${progress.completedCount}/${progress.totalCount};已完成階段:${doneStages.length > 0 ? doneStages.join('、') : '尚無'};目前階段:「${active ? active.label : '全部完成'}」。`,
+    `執行力:累計完成 ${totalTasksDone} 件每日任務;連續 ${streak} 天${doneToday ? '(今天已完成)' : '(今天還沒完成)'}。`,
+    '實際營運(每週回顧,新到舊):',
+    recentReviews.length > 0 ? recentReviews.join('\n') : '(還沒有每週回顧紀錄)',
+  ].join('\n');
+}
+
 /** System prompt for the dashboard stage advisor (may suggest tasks/goals). */
 export function buildStagePrompt({
   profile,
@@ -99,10 +172,11 @@ export function buildStagePrompt({
   financial,
   completedGoalIds = [],
   breakdowns = {},
+  dossier,
 }) {
   return [
-    '你是 VentureQuest 的創業顧問,幫還在上班的新手推進副業。',
-    describeProfile(profile, financial),
+    '你是 VentureQuest 的創業顧問,幫還在上班的新手推進副業。先讀使用者的完整狀態,依據實際數據給建議。',
+    dossier ?? describeProfile(profile, financial),
     `使用者目前在第「${stage.label}」階段(${stage.subtitle})。`,
     `這階段的過關條件與目前狀態:${describeGoalStatus(stage, completedGoalIds, breakdowns)}。`,
     '不要重複建議已完成的事,優先幫使用者推進未完成的條件。',
@@ -120,11 +194,18 @@ export function buildStagePrompt({
  * System prompt for breaking down one stage goal (or one of its
  * sub-items) the user does not know how to achieve.
  */
-export function buildGoalPrompt({ profile, stage, goal, pathLabels = [], financial }) {
+export function buildGoalPrompt({
+  profile,
+  stage,
+  goal,
+  pathLabels = [],
+  financial,
+  dossier,
+}) {
   const path = pathLabels.length > 0 ? `(它是「${pathLabels.join(' > ')}」的子項目)` : '';
   return [
-    '你是 VentureQuest 的創業顧問,幫還在上班的新手推進副業。',
-    describeProfile(profile, financial),
+    '你是 VentureQuest 的創業顧問,幫還在上班的新手推進副業。先讀使用者的完整狀態,依據實際數據給建議。',
+    dossier ?? describeProfile(profile, financial),
     `使用者目前在第「${stage.label}」階段(${stage.subtitle})。`,
     `使用者不知道怎麼達成這個目標:「${goal.label}」${path}。`,
     '',

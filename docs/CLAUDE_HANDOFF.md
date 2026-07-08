@@ -194,7 +194,8 @@ App shell 與跨區塊狀態：
 
 AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
-- `detectProvider(apiKey)`／`pickModelForStage(stageId, apiKey)`：依 key 前綴選供應商與分級模型。
+- `detectProvider(apiKey)`／`pickModelForStage(stageId, apiKey)`／`sanitizeApiKey`：依 key 前綴選供應商與分級模型;key 清成可見 ASCII。
+- `buildDossier({...})`：使用者完整狀態檔（方向、即時財務＋生死線／目標線、旅程進度、已完成階段、執行力 streak、最近 4 週實際數字），stage／goal 提示詞優先讀它;AdvisorPanel 提供「查看顧問看到的完整狀態」透明檢視。
 - `buildGeminiPayload`：Gemini generateContent 請求體（assistant→model 角色映射、token 上限）。
 - `buildStagePrompt` / `buildQuestionPrompt` / `buildGoalPrompt`：系統提示詞。stage/goal 版吃財務面板的即時數字（蓋過精靈快照），stage 版並附每個過關條件的完成狀態（含拆解進度），明確要求不重複建議已完成的事。
 - `parseAdvisorReply(text)`：解析 JSON 回覆，clamp：最多 3 任務（5–30 分鐘）、2 目標、5 個拆解步驟；answer 只接受非負數字或 80 字內字串。
@@ -244,7 +245,7 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
 ## 5. 測試狀態
 
-目前測試覆蓋（48/48 pass）：
+目前測試覆蓋（51/51 pass）：
 
 - 財務生死線、虧錢模型拒絕、在職節奏風險判斷。
 - 引導問答：題目順序、答案驗證、profile 產生（含探索分支與 schema 檢查）。
@@ -300,6 +301,8 @@ npm test
 - [x] 🔥 連續天數 streak＋Org-Tree 階段提示。
 - [x] 顧問 API 錯誤白話化。
 - [x] Gemini 雙供應商支援（key 前綴自動偵測、免費額度友善）。
+- [x] API key 隱形字元自動清除＋供應商偵測顯示。
+- [x] 使用者完整狀態檔（dossier）餵入顧問＋透明檢視。
 
 ### P2
 

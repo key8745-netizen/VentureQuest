@@ -384,6 +384,26 @@ button.mini {
   font-size: 0.85rem;
 }
 
+.dossier-view {
+  margin: 8px 0;
+}
+
+.dossier-view summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
+.dossier-view pre {
+  margin: 6px 0 0;
+  padding: 10px 12px;
+  background: var(--bg);
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-family: inherit;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .advisor-quick {
   margin: 4px 0 8px;
 }
