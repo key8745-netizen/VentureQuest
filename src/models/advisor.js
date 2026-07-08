@@ -40,6 +40,16 @@ const STAGE_MODELS = {
   },
 };
 
+/**
+ * API keys are plain printable ASCII. Copy-paste often smuggles in
+ * zero-width spaces, full-width characters, or surrounding text — which
+ * both breaks prefix detection and makes the browser reject the header
+ * ("String contains non ISO-8859-1 code point"). Strip everything else.
+ */
+export function sanitizeApiKey(raw) {
+  return String(raw ?? '').replace(/[^\x21-\x7E]/g, '');
+}
+
 export function detectProvider(apiKey) {
   return typeof apiKey === 'string' && apiKey.startsWith('AIza')
     ? 'gemini'
@@ -317,6 +327,9 @@ export function describeAdvisorError(error) {
 
   if (message.includes('credit balance is too low')) {
     return 'Anthropic 帳戶餘額不足:API 用量和 Claude 訂閱是分開計費的。到 console.anthropic.com 的 Plans & Billing 儲值(最低 5 美元)後就能用。或者改貼 Google AI Studio 的 Gemini key(AIza 開頭,有免費額度)。';
+  }
+  if (message.includes('ISO-8859-1')) {
+    return 'API key 夾帶了看不見的特殊字元(通常是複製時混入)。請按「清除 key」後,回到官方頁面重新複製貼上。';
   }
   if (status === 401 || message.includes('API key not valid')) {
     return 'API key 無效,請確認後重新輸入。';

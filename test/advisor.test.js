@@ -15,6 +15,7 @@ import {
   describeAdvisorError,
   detectProvider,
   buildGeminiPayload,
+  sanitizeApiKey,
   DAILY_CALL_LIMIT,
   HISTORY_KEEP_LIMIT,
   HISTORY_SEND_LIMIT,
@@ -323,4 +324,13 @@ test('describeAdvisorError translates common failures into plain language', () =
   );
   // Unknown errors still surface the raw message for debugging.
   assert.ok(describeAdvisorError(new Error('weird')).includes('weird'));
+});
+
+test('sanitizeApiKey strips invisible and non-ASCII characters', () => {
+  // Zero-width space + full-width space + CJK smuggled in by copy-paste.
+  assert.equal(sanitizeApiKey('\u200bAIza\u3000Syabc金鑰123\n'), 'AIzaSyabc123');
+  assert.equal(sanitizeApiKey('  sk-ant-api03-xyz  '), 'sk-ant-api03-xyz');
+  assert.equal(sanitizeApiKey(null), '');
+  // After sanitizing, provider detection works again.
+  assert.equal(detectProvider(sanitizeApiKey('\u200bAIzaSyabc')), 'gemini');
 });
