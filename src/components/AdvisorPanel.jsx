@@ -4,6 +4,7 @@ import { getCopy } from '../models/terminology.js';
 import {
   pickModelForStage,
   buildStagePrompt,
+  detectProvider,
   DAILY_CALL_LIMIT,
 } from '../models/advisor.js';
 
@@ -45,6 +46,9 @@ export default function AdvisorPanel({
   }
 
   const model = pickModelForStage(activeStage.id, apiKey);
+  const provider = detectProvider(apiKey);
+  const keyLooksKnown =
+    !apiKey || apiKey.startsWith('sk-ant') || apiKey.startsWith('AIza');
   const systemPrompt = buildStagePrompt({
     profile,
     stage: activeStage,
@@ -64,7 +68,12 @@ export default function AdvisorPanel({
 
       {apiKey ? (
         <p className="muted">
-          API key 已設定(只存在你的瀏覽器,不會隨 Export 匯出)。
+          API key 已設定,偵測為 {provider === 'gemini' ? 'Google Gemini' : 'Anthropic'}(只存在你的瀏覽器,不會隨 Export 匯出)。
+          {!keyLooksKnown && (
+            <strong>
+              {' '}注意:這個 key 不像 Anthropic(sk-ant- 開頭)也不像 Gemini(AIza 開頭),可能貼錯了。
+            </strong>
+          )}
           <button type="button" className="mini" onClick={() => onApiKeyChange('')}>
             清除 key
           </button>
