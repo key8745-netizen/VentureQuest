@@ -377,3 +377,18 @@ test('stage and goal prompts embed the dossier when provided', () => {
   });
   assert.ok(goalPrompt.includes('測試狀態內容'));
 });
+
+test('diagnosis prompt reads the dossier when provided', () => {
+  const prompt = buildDiagnosisPrompt({
+    profile,
+    stage,
+    weeklyNeed: 154,
+    dossier: '【使用者完整狀態】\n完整狀態內容含回顧',
+    reviews: [{ week: '2026-W28', hours: 6, units: 20, note: '' }],
+  });
+  assert.ok(prompt.includes('【使用者完整狀態】'));
+  // The dossier already carries the reviews — no duplicated block.
+  assert.ok(!prompt.includes('最近的每週回顧'));
+  assert.ok(prompt.includes('154'));
+  assert.ok(prompt.includes('耐心'));
+});
