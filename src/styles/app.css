@@ -384,6 +384,14 @@ button.mini {
   font-size: 0.85rem;
 }
 
+.advisor-quick {
+  margin: 4px 0 8px;
+}
+
+.advisor-quick .mini {
+  margin-left: 0;
+}
+
 .advisor-input-row {
   display: flex;
   gap: 8px;

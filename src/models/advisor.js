@@ -110,6 +110,50 @@ export function buildGoalPrompt({ profile, stage, goal, pathLabels = [], financi
   ].join('\n');
 }
 
+/**
+ * System prompt for the weekly diagnosis: the navigator role. Sees the
+ * stage goal status and the user's actual weekly numbers, and patiently
+ * plots a course from wherever they are back toward the stage goal.
+ */
+export function buildDiagnosisPrompt({
+  profile,
+  stage,
+  financial,
+  completedGoalIds = [],
+  breakdowns = {},
+  weeklyNeed,
+  reviews = [],
+}) {
+  const recent = reviews
+    .slice(-4)
+    .reverse()
+    .map(
+      (review) =>
+        `${review.week}:投入 ${review.hours} 小時、賣出 ${review.units} 個` +
+        (review.note ? `,心得:${review.note}` : ''),
+    )
+    .join('\n');
+
+  return [
+    '你是 VentureQuest 的創業顧問,任務是「導航」:無論使用者這週表現如何,都要以完成目前階段目標、最終走向大目標為前提,規劃接下來的路。',
+    describeProfile(profile, financial),
+    `目前階段:「${stage.label}」(${stage.subtitle})。`,
+    `階段過關條件與狀態:${describeGoalStatus(stage, completedGoalIds, breakdowns)}。`,
+    weeklyNeed != null ? `照生死線換算,每週至少要賣約 ${weeklyNeed} 個單位。` : '',
+    '最近的每週回顧(新到舊):',
+    recent || '(還沒有紀錄)',
+    '',
+    '回答規則:',
+    '1. 繁體中文,不超過 250 字:先診斷這週有沒有偏離階段目標、偏在哪;再給下週 1-2 個最重要的重點。',
+    '2. 語氣有耐心、不責備。就算連續落後或走偏,也不要叫使用者重來,而是從現在的位置設計走回階段目標的最短路徑。',
+    '3. 需要修正方向時,可建議 tasks(每項 5-30 分鐘,最多 3 項,會進每日任務)或 goals(最多 2 項,會成為可勾選的過關條件)。',
+    '4. 一律輸出單一合法 JSON 物件,不要 markdown code fence,格式:',
+    '{"reply": "診斷與下週重點", "tasks": [{"label": "...", "minutes": 15}], "goals": [{"label": "..."}]}',
+  ]
+    .filter(Boolean)
+    .join('\n');
+}
+
 /** System prompt for the wizard question helper (reply + fill-in answer). */
 export function buildQuestionPrompt({ question, hint, type, answers }) {
   const known = Object.entries(answers ?? {})
@@ -245,6 +289,14 @@ export const MOCK_GOAL_REPLY = {
     { label: '(示範)查清楚這個目標需要什麼條件' },
     { label: '(示範)把第一個條件排進這週的行程' },
   ],
+};
+
+export const MOCK_DIAGNOSIS_REPLY = {
+  reply:
+    '(示範回覆)還沒設定 API key。設定後,顧問會根據你這週的實際數字診斷有沒有走偏,並耐心規劃下週怎麼走回階段目標。下面是示範建議。',
+  tasks: [{ label: '(示範)挑一個賣最好的品項,下週主打它', minutes: 15 }],
+  goals: [],
+  steps: [],
 };
 
 /**

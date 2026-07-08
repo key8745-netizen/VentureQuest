@@ -6,6 +6,7 @@ import {
   buildStagePrompt,
   buildQuestionPrompt,
   buildGoalPrompt,
+  buildDiagnosisPrompt,
   parseAdvisorReply,
   canAskToday,
   recordCall,
@@ -236,4 +237,30 @@ test('buildMessages skips mock turns, limits context and ends with the question'
   assert.equal(messages.at(-1).role, 'user');
   assert.equal(messages.at(-1).content, '新問題');
   assert.ok(!messages.some((m) => m.content === 'mock-q'), 'mock turns are excluded');
+});
+
+test('diagnosis prompt navigates from actual weekly numbers back to the stage goal', () => {
+  const prompt = buildDiagnosisPrompt({
+    profile,
+    stage,
+    financial: { monthlyFixedCost: 30000, unitPrice: 100, unitCost: 55 },
+    completedGoalIds: ['explore-g1'],
+    breakdowns: {},
+    weeklyNeed: 154,
+    reviews: [
+      { week: '2026-W27', hours: 5, units: 10, note: '客人太少' },
+      { week: '2026-W28', hours: 6, units: 20, note: '' },
+    ],
+  });
+
+  // Actual performance is in front of the advisor.
+  assert.ok(prompt.includes('2026-W28'));
+  assert.ok(prompt.includes('20'));
+  assert.ok(prompt.includes('客人太少'));
+  assert.ok(prompt.includes('154'), 'weekly quota included');
+  // Navigation attitude: patient re-routing toward the stage goal.
+  assert.ok(prompt.includes('耐心'));
+  assert.ok(prompt.includes('不責備'));
+  // Can propose corrective tasks/goals.
+  assert.ok(prompt.includes('"tasks"'));
 });

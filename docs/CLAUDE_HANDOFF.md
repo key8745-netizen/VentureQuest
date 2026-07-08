@@ -19,7 +19,7 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 - 專業術語 / 街頭白話切換。
 - 防呆：`loadState` 對每個欄位做型別檢查（壞掉的值退回預設）；全域 ErrorBoundary 提供「清除資料重新開始」而不是白屏。
 - 財務生死線：每月固定成本、單位售價、單位變動成本、最低單量；另顯示目標線（要賺到目標月收入每月要賣幾個）。
-- 每週回顧：每 ISO 週記一筆實際投入時數／賣出單位／心得（`weeklyReviews`，同週覆寫、最多留 12 週），對照生死線週配額並提示過勞風險。
+- 每週回顧＋顧問導航：每 ISO 週記一筆實際投入時數／賣出單位／心得（`weeklyReviews`，同週覆寫、最多留 12 週），對照生死線週配額並提示過勞風險。記完後可一鍵請顧問「診斷」：`buildDiagnosisPrompt` 餵入階段條件狀態＋最近 4 週實際數字＋週配額，指示顧問耐心、不責備、從現在位置設計走回階段目標的最短路徑，並可建議修正用的任務／條件（可採用）。這是「AI 依實際達成狀況規劃走向」的閉環。
 - 今日 micro-task：依照今天可用分鐘數，只顯示一個可以做的小任務；「換一個」可輪替到下一個合適任務（`taskRotation`，持久化），並顯示本階段任務完成度。
 - 產業無感 schema：底層只用 `productId`、單位經濟、抽象 operating nodes；使用者的產業只存在 `profile.idea` 這個字串。
 - 最小 Org-Tree：可複製節點、解鎖管理節點。
@@ -199,6 +199,7 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 - `parseAdvisorReply(text)`：解析 JSON 回覆，clamp：最多 3 任務（5–30 分鐘）、2 目標、5 個拆解步驟；answer 只接受非負數字或 80 字內字串。
 - `canAskToday` / `recordCall` / `DAILY_CALL_LIMIT`：每日呼叫上限。
 - `capHistory` / `buildMessages`：每個對話最多存 10 輪；呼叫 API 只帶最近 6 輪真實對話（mock 不算）。
+- `buildDiagnosisPrompt({...reviews, weeklyNeed})`：每週導航診斷的提示詞。
 - `askAdvisor({...})`：真正的 API 呼叫；無 key 回傳寫死 mock。
 
 ### `src/models/weeklyReview.js`
@@ -234,7 +235,7 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
 ## 5. 測試狀態
 
-目前測試覆蓋（39/39 pass）：
+目前測試覆蓋（40/40 pass）：
 
 - 財務生死線、虧錢模型拒絕、在職節奏風險判斷。
 - 引導問答：題目順序、答案驗證、profile 產生（含探索分支與 schema 檢查）。
@@ -286,6 +287,7 @@ npm test
 - [x] loadState 型別防呆＋全域 ErrorBoundary。
 - [x] README。
 - [x] 今日任務「換一個」輪替＋本階段任務計數。
+- [x] 每週顧問導航診斷（實際數字→走偏判斷→修正路徑）。
 
 ### P2
 

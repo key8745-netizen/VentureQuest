@@ -26,6 +26,7 @@ export default function AdvisorChat({
   onAdoptGoal,
   onAdoptSteps,
   onAdoptAnswer,
+  quickAsk,
   mockReply,
   placeholder,
 }) {
@@ -33,8 +34,8 @@ export default function AdvisorChat({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSend = async () => {
-    const question = input.trim();
+  const handleSend = async (preset) => {
+    const question = (preset ?? input).trim();
     if (!question || loading) return;
 
     const today = todayKey();
@@ -174,6 +175,19 @@ export default function AdvisorChat({
 
       {error && <p className="advisor-error">{error}</p>}
 
+      {quickAsk && (
+        <p className="advisor-quick">
+          <button
+            type="button"
+            className="mini"
+            disabled={loading}
+            onClick={() => handleSend(quickAsk.question)}
+          >
+            {loading ? '思考中…' : quickAsk.label}
+          </button>
+        </p>
+      )}
+
       <div className="advisor-input-row">
         <input
           type="text"
@@ -184,7 +198,7 @@ export default function AdvisorChat({
             if (event.key === 'Enter') handleSend();
           }}
         />
-        <button type="button" onClick={handleSend} disabled={loading || !input.trim()}>
+        <button type="button" onClick={() => handleSend()} disabled={loading || !input.trim()}>
           {loading ? '思考中…' : '送出'}
         </button>
       </div>
