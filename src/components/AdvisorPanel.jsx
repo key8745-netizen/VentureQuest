@@ -8,9 +8,12 @@ import {
 } from '../models/advisor.js';
 
 const MODEL_LABELS = {
-  'claude-haiku-4-5': 'Haiku(最省)',
-  'claude-sonnet-5': 'Sonnet(一般)',
-  'claude-opus-4-8': 'Opus(最強)',
+  'claude-haiku-4-5': 'Claude Haiku(最省)',
+  'claude-sonnet-5': 'Claude Sonnet(一般)',
+  'claude-opus-4-8': 'Claude Opus(最強)',
+  'gemini-2.5-flash-lite': 'Gemini Flash-Lite(最省)',
+  'gemini-2.5-flash': 'Gemini Flash(一般)',
+  'gemini-2.5-pro': 'Gemini Pro(最強)',
 };
 
 export default function AdvisorPanel({
@@ -41,7 +44,7 @@ export default function AdvisorPanel({
     );
   }
 
-  const model = pickModelForStage(activeStage.id);
+  const model = pickModelForStage(activeStage.id, apiKey);
   const systemPrompt = buildStagePrompt({
     profile,
     stage: activeStage,
@@ -70,7 +73,7 @@ export default function AdvisorPanel({
         <div className="advisor-key-form">
           <input
             type="password"
-            placeholder="sk-ant-…"
+            placeholder="sk-ant-… 或 AIza…"
             value={keyDraft}
             onChange={(event) => setKeyDraft(event.target.value)}
           />
@@ -86,12 +89,13 @@ export default function AdvisorPanel({
             儲存
           </button>
           <p className="muted">
-            key 只存在你這台裝置的瀏覽器,直接連 Anthropic,不經過任何伺服器。
+            支援 Anthropic key(sk-ant-… 開頭)或 Google Gemini key(AIza 開頭,到
+            aistudio.google.com 免費申請,有免費額度)。key 只存在你這台裝置的瀏覽器,直連官方 API,不經過任何伺服器。
           </p>
         </div>
       ) : (
         <p className="muted">
-          還沒設定 API key,回覆會是示範用的假資料。
+          還沒設定 API key,回覆會是示範用的假資料。(支援 Anthropic 或免費的 Gemini key)
           <button type="button" className="mini" onClick={() => setShowKeyForm(true)}>
             設定 API key
           </button>

@@ -18,18 +18,37 @@ export const MAX_REPLY_TOKENS = 1024;
 export const HISTORY_KEEP_LIMIT = 10;
 export const HISTORY_SEND_LIMIT = 6;
 
+// Two providers, same tiering idea: cheap early, strong late. The
+// provider is detected from the key prefix, so users just paste
+// whichever key they have (Google AI Studio keys have a free tier).
 const STAGE_MODELS = {
-  explore: 'claude-haiku-4-5',
-  prepare: 'claude-haiku-4-5',
-  operate: 'claude-sonnet-5',
-  grow: 'claude-sonnet-5',
-  scale: 'claude-opus-4-8',
+  anthropic: {
+    explore: 'claude-haiku-4-5',
+    prepare: 'claude-haiku-4-5',
+    operate: 'claude-sonnet-5',
+    grow: 'claude-sonnet-5',
+    scale: 'claude-opus-4-8',
+    fallback: 'claude-haiku-4-5',
+  },
+  gemini: {
+    explore: 'gemini-2.5-flash-lite',
+    prepare: 'gemini-2.5-flash-lite',
+    operate: 'gemini-2.5-flash',
+    grow: 'gemini-2.5-flash',
+    scale: 'gemini-2.5-pro',
+    fallback: 'gemini-2.5-flash-lite',
+  },
 };
 
-const CHEAPEST_MODEL = 'claude-haiku-4-5';
+export function detectProvider(apiKey) {
+  return typeof apiKey === 'string' && apiKey.startsWith('AIza')
+    ? 'gemini'
+    : 'anthropic';
+}
 
-export function pickModelForStage(stageId) {
-  return STAGE_MODELS[stageId] ?? CHEAPEST_MODEL;
+export function pickModelForStage(stageId, apiKey) {
+  const tiers = STAGE_MODELS[detectProvider(apiKey)];
+  return tiers[stageId] ?? tiers.fallback;
 }
 
 // financial (optional) carries the live numbers from the financial
@@ -297,10 +316,14 @@ export function describeAdvisorError(error) {
   const message = String(error?.message ?? error ?? '');
 
   if (message.includes('credit balance is too low')) {
-    return 'Anthropic 帳戶餘額不足:API 用量和 Claude 訂閱是分開計費的。到 console.anthropic.com 的 Plans & Billing 儲值(最低 5 美元)後就能用。';
+    return 'Anthropic 帳戶餘額不足:API 用量和 Claude 訂閱是分開計費的。到 console.anthropic.com 的 Plans & Billing 儲值(最低 5 美元)後就能用。或者改貼 Google AI Studio 的 Gemini key(AIza 開頭,有免費額度)。';
   }
-  if (status === 401) return 'API key 無效,請確認後重新輸入。';
-  if (status === 429) return '請求太頻繁,被 Anthropic 暫時限流,休息幾秒再試。';
+  if (status === 401 || message.includes('API key not valid')) {
+    return 'API key 無效,請確認後重新輸入。';
+  }
+  if (status === 429) {
+    return '請求太頻繁或今日免費額度用完(429),休息一下或明天再試。';
+  }
   if (status === 529 || (typeof status === 'number' && status >= 500)) {
     return 'Anthropic 服務暫時忙碌,稍後再試。';
   }
@@ -314,6 +337,38 @@ export const MOCK_DIAGNOSIS_REPLY = {
   goals: [],
   steps: [],
 };
+
+/** Request body for Gemini's generateContent (roles: assistant → model). */
+export function buildGeminiPayload(systemPrompt, messages) {
+  return {
+    systemInstruction: { parts: [{ text: systemPrompt }] },
+    contents: messages.map((message) => ({
+      role: message.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: message.content }],
+    })),
+    generationConfig: { maxOutputTokens: MAX_REPLY_TOKENS },
+  };
+}
+
+async function askGemini({ apiKey, model, systemPrompt, messages }) {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(buildGeminiPayload(systemPrompt, messages)),
+    },
+  );
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(data?.error?.message ?? `HTTP ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+  return (data.candidates?.[0]?.content?.parts ?? [])
+    .map((part) => part.text ?? '')
+    .join('');
+}
 
 /**
  * Sends one question to the advisor. Returns { reply, tasks, goals, steps }.
@@ -331,20 +386,24 @@ export async function askAdvisor({
     return { ...mockReply, mock: true };
   }
 
-  const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
   const messages = buildMessages(history, question);
 
-  const response = await client.messages.create({
-    model,
-    max_tokens: MAX_REPLY_TOKENS,
-    system: systemPrompt,
-    messages,
-  });
-
-  const text = response.content
-    .filter((block) => block.type === 'text')
-    .map((block) => block.text)
-    .join('');
+  let text;
+  if (detectProvider(apiKey) === 'gemini') {
+    text = await askGemini({ apiKey, model, systemPrompt, messages });
+  } else {
+    const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
+    const response = await client.messages.create({
+      model,
+      max_tokens: MAX_REPLY_TOKENS,
+      system: systemPrompt,
+      messages,
+    });
+    text = response.content
+      .filter((block) => block.type === 'text')
+      .map((block) => block.text)
+      .join('');
+  }
 
   return { ...parseAdvisorReply(text), rawReply: text };
 }

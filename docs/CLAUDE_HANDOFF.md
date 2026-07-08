@@ -13,7 +13,7 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 - 無後端、無資料庫。
 - 引導式問答（onboarding wizard）：一次一題，答完產生計畫；每題可問 AI，顧問可附「建議答案」讓使用者一鍵填入。之後可用 header 的「修改目標」重開精靈（預填現值、可取消），儲存後進度與拆解全部保留。
 - 五階段路線圖：探索驗證 → 起飛準備 → 落地營運 → 穩定成長 → 規模擴張。每階段有可勾選的過關條件（goals）＋ 5–30 分鐘 micro-tasks。過關瞬間跳一次性慶祝彈窗（記錄在 `celebratedStageIds`，重新整理不重跳）。
-- AI 創業顧問：使用者自備 Anthropic API key（存瀏覽器獨立 key，不隨 Export 匯出），依階段分級選模型（explore/prepare → Haiku、operate/grow → Sonnet、scale → Opus）。顧問可建議新任務／過關條件，使用者按「加入」採用。
+- AI 創業顧問：使用者自備 API key（存瀏覽器獨立 key，不隨 Export 匯出），**雙供應商**依 key 前綴自動偵測——Anthropic（sk-ant-）分級 Haiku→Sonnet→Opus；Google Gemini（AIza,AI Studio 有免費額度）分級 Flash-Lite→Flash→Pro。Gemini 走瀏覽器 fetch 直連 generateContent。顧問可建議新任務／過關條件，使用者按「加入」採用。
 - 目標遞迴拆解：每個過關條件（含子項目）旁有「問 AI」，顧問解釋怎麼達成、可拆成最多 5 個可勾選子項目，缺技能／資格時還可給最多 3 個 5–30 分鐘的訓練任務（採用後進該階段的每日任務輪替）（存在 `breakdowns`，可無限層遞迴）。有子項目的目標由子項目全勾自動完成，母項目 checkbox 變唯讀。AI 加入的項目（子項目、採用的過關條件）都可用「✕」移除，整個子樹一起清掉；子項目清空後母項目恢復可直接勾選。內建的階段條件不可移除。
 - AI 成本防護欄（已寫死在 `advisor.js`）：每日 20 次呼叫上限、單次回覆 1024 tokens、無 key 時 fallback 到寫死的 mock 回覆。
 - 專業術語 / 街頭白話切換。
@@ -194,7 +194,8 @@ App shell 與跨區塊狀態：
 
 AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
-- `pickModelForStage(stageId)`：Haiku / Sonnet / Opus 分級。
+- `detectProvider(apiKey)`／`pickModelForStage(stageId, apiKey)`：依 key 前綴選供應商與分級模型。
+- `buildGeminiPayload`：Gemini generateContent 請求體（assistant→model 角色映射、token 上限）。
 - `buildStagePrompt` / `buildQuestionPrompt` / `buildGoalPrompt`：系統提示詞。stage/goal 版吃財務面板的即時數字（蓋過精靈快照），stage 版並附每個過關條件的完成狀態（含拆解進度），明確要求不重複建議已完成的事。
 - `parseAdvisorReply(text)`：解析 JSON 回覆，clamp：最多 3 任務（5–30 分鐘）、2 目標、5 個拆解步驟；answer 只接受非負數字或 80 字內字串。
 - `canAskToday` / `recordCall` / `DAILY_CALL_LIMIT`：每日呼叫上限。
@@ -243,7 +244,7 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
 ## 5. 測試狀態
 
-目前測試覆蓋（45/45 pass）：
+目前測試覆蓋（48/48 pass）：
 
 - 財務生死線、虧錢模型拒絕、在職節奏風險判斷。
 - 引導問答：題目順序、答案驗證、profile 產生（含探索分支與 schema 檢查）。
@@ -297,6 +298,8 @@ npm test
 - [x] 今日任務「換一個」輪替＋本階段任務計數。
 - [x] 每週顧問導航診斷（實際數字→走偏判斷→修正路徑）。
 - [x] 🔥 連續天數 streak＋Org-Tree 階段提示。
+- [x] 顧問 API 錯誤白話化。
+- [x] Gemini 雙供應商支援（key 前綴自動偵測、免費額度友善）。
 
 ### P2
 

@@ -23,10 +23,12 @@ npm run build   # 打包到 dist/
 
 ## AI 顧問設定
 
-不設定也能用（顯示示範回覆）。要啟用真實 AI：到 [console.anthropic.com](https://console.anthropic.com) 申請 API key，在「AI 創業顧問」卡片貼上。
+不設定也能用（顯示示範回覆）。要啟用真實 AI，支援兩種 key，貼上自動辨識：
 
-- key 只存在你的瀏覽器（獨立 localStorage 項目，**不會**隨 Export JSON 匯出），直連 Anthropic，不經過任何伺服器。
-- 寫死的費用防護欄：每天最多 20 次、單次回覆 1024 tokens、對話上下文最多帶最近 6 輪。
+- **Google Gemini（免費）**：到 [aistudio.google.com](https://aistudio.google.com) 申請 key（`AIza` 開頭），有免費額度。分級：Flash-Lite → Flash → Pro。
+- **Anthropic Claude（付費）**：到 [console.anthropic.com](https://console.anthropic.com) 申請 key（`sk-ant-` 開頭）並儲值。分級：Haiku → Sonnet → Opus。
+
+key 只存在你的瀏覽器（獨立 localStorage 項目，**不會**隨 Export JSON 匯出），直連官方 API，不經過任何伺服器。寫死的費用防護欄：每天最多 20 次、單次回覆 1024 tokens、對話上下文最多帶最近 6 輪。
 
 ## 佈署
 

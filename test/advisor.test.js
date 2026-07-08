@@ -13,6 +13,8 @@ import {
   capHistory,
   buildMessages,
   describeAdvisorError,
+  detectProvider,
+  buildGeminiPayload,
   DAILY_CALL_LIMIT,
   HISTORY_KEEP_LIMIT,
   HISTORY_SEND_LIMIT,
@@ -45,6 +47,41 @@ test('picks a cheaper model for early stages and stronger ones later', () => {
   assert.equal(pickModelForStage('scale'), 'claude-opus-4-8');
   // Unknown stages fall back to the cheapest model.
   assert.equal(pickModelForStage('nope'), 'claude-haiku-4-5');
+});
+
+test('detects the provider from the key prefix', () => {
+  assert.equal(detectProvider('sk-ant-api03-xxx'), 'anthropic');
+  assert.equal(detectProvider('AIzaSyExample'), 'gemini');
+  assert.equal(detectProvider(''), 'anthropic');
+  assert.equal(detectProvider(undefined), 'anthropic');
+});
+
+test('a Gemini key switches the stage tiers to Gemini models', () => {
+  const key = 'AIzaSyExample';
+  assert.equal(pickModelForStage('explore', key), 'gemini-2.5-flash-lite');
+  assert.equal(pickModelForStage('prepare', key), 'gemini-2.5-flash-lite');
+  assert.equal(pickModelForStage('operate', key), 'gemini-2.5-flash');
+  assert.equal(pickModelForStage('grow', key), 'gemini-2.5-flash');
+  assert.equal(pickModelForStage('scale', key), 'gemini-2.5-pro');
+  // An Anthropic key keeps the Claude tiers.
+  assert.equal(pickModelForStage('explore', 'sk-ant-xxx'), 'claude-haiku-4-5');
+});
+
+test('builds a Gemini payload with mapped roles and a token cap', () => {
+  const payload = buildGeminiPayload('系統指示', [
+    { role: 'user', content: '問題一' },
+    { role: 'assistant', content: '回答一' },
+    { role: 'user', content: '問題二' },
+  ]);
+
+  assert.equal(payload.systemInstruction.parts[0].text, '系統指示');
+  assert.deepEqual(
+    payload.contents.map((c) => c.role),
+    ['user', 'model', 'user'],
+    'assistant maps to model',
+  );
+  assert.equal(payload.contents[1].parts[0].text, '回答一');
+  assert.ok(payload.generationConfig.maxOutputTokens > 0);
 });
 
 test('stage prompt carries the user context and the JSON contract', () => {
@@ -275,6 +312,15 @@ test('describeAdvisorError translates common failures into plain language', () =
   assert.ok(describeAdvisorError({ status: 429, message: 'rate limited' }).includes('太頻繁'));
   assert.ok(describeAdvisorError({ status: 529, message: 'overloaded' }).includes('忙碌'));
   assert.ok(describeAdvisorError({ status: 500, message: 'boom' }).includes('忙碌'));
+  // Gemini-flavoured failures are translated too.
+  assert.ok(
+    describeAdvisorError({ status: 400, message: 'API key not valid. Please pass a valid API key.' })
+      .includes('API key 無效'),
+  );
+  assert.ok(
+    describeAdvisorError({ status: 429, message: 'RESOURCE_EXHAUSTED: quota exceeded' })
+      .includes('額度'),
+  );
   // Unknown errors still surface the raw message for debugging.
   assert.ok(describeAdvisorError(new Error('weird')).includes('weird'));
 });
