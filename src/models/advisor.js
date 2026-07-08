@@ -233,6 +233,7 @@ export function buildDiagnosisPrompt({
   breakdowns = {},
   weeklyNeed,
   reviews = [],
+  dossier,
 }) {
   const recent = reviews
     .slice(-4)
@@ -244,14 +245,26 @@ export function buildDiagnosisPrompt({
     )
     .join('\n');
 
+  // The dossier already carries profile, goal statuses, and the recent
+  // reviews — only the stage focus and weekly quota are added on top.
+  const context = dossier
+    ? [
+        dossier,
+        `目前階段:「${stage.label}」(${stage.subtitle})。`,
+        weeklyNeed != null ? `照生死線換算,每週至少要賣約 ${weeklyNeed} 個單位。` : '',
+      ]
+    : [
+        describeProfile(profile, financial),
+        `目前階段:「${stage.label}」(${stage.subtitle})。`,
+        `階段過關條件與狀態:${describeGoalStatus(stage, completedGoalIds, breakdowns)}。`,
+        weeklyNeed != null ? `照生死線換算,每週至少要賣約 ${weeklyNeed} 個單位。` : '',
+        '最近的每週回顧(新到舊):',
+        recent || '(還沒有紀錄)',
+      ];
+
   return [
     '你是 VentureQuest 的創業顧問,任務是「導航」:無論使用者這週表現如何,都要以完成目前階段目標、最終走向大目標為前提,規劃接下來的路。',
-    describeProfile(profile, financial),
-    `目前階段:「${stage.label}」(${stage.subtitle})。`,
-    `階段過關條件與狀態:${describeGoalStatus(stage, completedGoalIds, breakdowns)}。`,
-    weeklyNeed != null ? `照生死線換算,每週至少要賣約 ${weeklyNeed} 個單位。` : '',
-    '最近的每週回顧(新到舊):',
-    recent || '(還沒有紀錄)',
+    ...context,
     '',
     '回答規則:',
     '1. 繁體中文,不超過 250 字:先診斷這週有沒有偏離階段目標、偏在哪;再給下週 1-2 個最重要的重點。',

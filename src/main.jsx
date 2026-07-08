@@ -432,6 +432,7 @@ function App() {
               onAdoptGoal={(stageId, goal) => addCustomization(stageId, 'goals', goal)}
               advisorHistories={state.advisorHistories}
               onAdvisorHistoryChange={setAdvisorHistory}
+              dossier={dossier}
             />
             <FinancialPanel
               mode={state.mode}

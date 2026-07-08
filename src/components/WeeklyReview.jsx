@@ -33,6 +33,7 @@ export default function WeeklyReview({
   onAdoptGoal,
   advisorHistories,
   onAdvisorHistoryChange,
+  dossier,
 }) {
   const week = getWeekLabel();
   const current = reviews.find((review) => review.week === week);
@@ -143,6 +144,7 @@ export default function WeeklyReview({
               breakdowns,
               weeklyNeed,
               reviews,
+              dossier,
             })}
             history={advisorHistories['review'] ?? []}
             onHistoryChange={(turns) => onAdvisorHistoryChange('review', turns)}

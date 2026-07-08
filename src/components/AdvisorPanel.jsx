@@ -37,6 +37,7 @@ export default function AdvisorPanel({
 }) {
   const [showKeyForm, setShowKeyForm] = useState(false);
   const [keyDraft, setKeyDraft] = useState('');
+  const [copied, setCopied] = useState(false);
 
   if (!activeStage) {
     return (
@@ -118,6 +119,18 @@ export default function AdvisorPanel({
         <details className="dossier-view">
           <summary className="muted">查看顧問看到的完整狀態</summary>
           <pre>{dossier}</pre>
+          <button
+            type="button"
+            className="mini"
+            onClick={() => {
+              navigator.clipboard?.writeText(dossier).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              });
+            }}
+          >
+            {copied ? '已複製!' : '複製狀態(可貼到任何 AI 接續諮詢)'}
+          </button>
         </details>
       )}
 
