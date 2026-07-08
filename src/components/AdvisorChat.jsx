@@ -4,6 +4,7 @@ import {
   canAskToday,
   recordCall,
   todayKey,
+  describeAdvisorError,
   DAILY_CALL_LIMIT,
 } from '../models/advisor.js';
 
@@ -61,11 +62,7 @@ export default function AdvisorChat({
         onUsageChange(recordCall(usage, today));
       }
     } catch (err) {
-      if (err?.status === 401) {
-        setError('API key 無效,請確認後重新輸入。');
-      } else {
-        setError(`發生錯誤:${err?.message ?? err}`);
-      }
+      setError(describeAdvisorError(err));
     } finally {
       setLoading(false);
     }

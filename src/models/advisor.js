@@ -291,6 +291,22 @@ export const MOCK_GOAL_REPLY = {
   ],
 };
 
+/** Turns SDK/API errors into plain-language messages for the chat UI. */
+export function describeAdvisorError(error) {
+  const status = error?.status;
+  const message = String(error?.message ?? error ?? '');
+
+  if (message.includes('credit balance is too low')) {
+    return 'Anthropic 帳戶餘額不足:API 用量和 Claude 訂閱是分開計費的。到 console.anthropic.com 的 Plans & Billing 儲值(最低 5 美元)後就能用。';
+  }
+  if (status === 401) return 'API key 無效,請確認後重新輸入。';
+  if (status === 429) return '請求太頻繁,被 Anthropic 暫時限流,休息幾秒再試。';
+  if (status === 529 || (typeof status === 'number' && status >= 500)) {
+    return 'Anthropic 服務暫時忙碌,稍後再試。';
+  }
+  return `發生錯誤:${message}`;
+}
+
 export const MOCK_DIAGNOSIS_REPLY = {
   reply:
     '(示範回覆)還沒設定 API key。設定後,顧問會根據你這週的實際數字診斷有沒有走偏,並耐心規劃下週怎麼走回階段目標。下面是示範建議。',

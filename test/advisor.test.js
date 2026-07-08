@@ -12,6 +12,7 @@ import {
   recordCall,
   capHistory,
   buildMessages,
+  describeAdvisorError,
   DAILY_CALL_LIMIT,
   HISTORY_KEEP_LIMIT,
   HISTORY_SEND_LIMIT,
@@ -263,4 +264,17 @@ test('diagnosis prompt navigates from actual weekly numbers back to the stage go
   assert.ok(prompt.includes('不責備'));
   // Can propose corrective tasks/goals.
   assert.ok(prompt.includes('"tasks"'));
+});
+
+test('describeAdvisorError translates common failures into plain language', () => {
+  assert.ok(
+    describeAdvisorError({ status: 400, message: 'Your credit balance is too low to access the Anthropic API.' })
+      .includes('餘額不足'),
+  );
+  assert.ok(describeAdvisorError({ status: 401, message: 'unauthorized' }).includes('API key 無效'));
+  assert.ok(describeAdvisorError({ status: 429, message: 'rate limited' }).includes('太頻繁'));
+  assert.ok(describeAdvisorError({ status: 529, message: 'overloaded' }).includes('忙碌'));
+  assert.ok(describeAdvisorError({ status: 500, message: 'boom' }).includes('忙碌'));
+  // Unknown errors still surface the raw message for debugging.
+  assert.ok(describeAdvisorError(new Error('weird')).includes('weird'));
 });

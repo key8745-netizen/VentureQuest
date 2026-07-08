@@ -201,6 +201,7 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 - `capHistory` / `buildMessages`：每個對話最多存 10 輪；呼叫 API 只帶最近 6 輪真實對話（mock 不算）。
 - `buildDiagnosisPrompt({...reviews, weeklyNeed})`：每週導航診斷的提示詞。
 - `askAdvisor({...})`：真正的 API 呼叫；無 key 回傳寫死 mock。
+- `describeAdvisorError(err)`：把常見 API 錯誤翻成白話（餘額不足、401、429、5xx）。
 
 ### `src/models/momentum.js`
 
@@ -242,7 +243,7 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
 ## 5. 測試狀態
 
-目前測試覆蓋（44/44 pass）：
+目前測試覆蓋（45/45 pass）：
 
 - 財務生死線、虧錢模型拒絕、在職節奏風險判斷。
 - 引導問答：題目順序、答案驗證、profile 產生（含探索分支與 schema 檢查）。
