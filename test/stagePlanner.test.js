@@ -293,3 +293,32 @@ test('pickRotatingTask cycles through the fitting tasks', () => {
   assert.equal(pickRotatingTask(tasks, 3).id, 'a', 'rotation wraps around');
   assert.equal(pickRotatingTask([], 5), null);
 });
+
+test('a user who already quit gets runway framing instead of quit-prep', () => {
+  const leftProfile = { ...profile, employment: 'left' };
+  const plan = buildStagePlan({ profile: leftProfile });
+  const prepare = plan.stages[1];
+
+  // Same ids — progress survives switching employment via 修改目標.
+  assert.deepEqual(
+    prepare.goals.map((goal) => goal.id),
+    buildStagePlan({ profile }).stages[1].goals.map((goal) => goal.id),
+  );
+
+  // No quit-your-job framing anywhere in the stage copy.
+  const copy = [
+    prepare.subtitle,
+    ...prepare.goals.map((goal) => goal.label),
+    ...prepare.tasks.map((task) => task.label),
+  ].join(' ');
+  assert.ok(!copy.includes('離開正職'), copy);
+  assert.ok(!copy.includes('離職'), copy);
+  assert.ok(copy.includes('跑道'), 'runway framing appears');
+
+  // Explore subtitle also drops the day-job framing.
+  assert.ok(!plan.stages[0].subtitle.includes('還在上班'));
+
+  // Employed users keep the original copy.
+  const employed = buildStagePlan({ profile });
+  assert.ok(employed.stages[1].subtitle.includes('離開正職'));
+});
