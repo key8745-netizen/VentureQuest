@@ -30,6 +30,10 @@ npm run build   # 打包到 dist/
 
 key 只存在你的瀏覽器（獨立 localStorage 項目，**不會**隨 Export JSON 匯出），直連官方 API，不經過任何伺服器。寫死的費用防護欄：每天最多 20 次、單次回覆 1024 tokens、對話上下文最多帶最近 6 輪。
 
+## 手機使用
+
+支援「加入主畫面」（PWA）：手機瀏覽器開啟網站 → 選單 → 加入主畫面，之後像 app 一樣全螢幕開啟。
+
 ## 佈署
 
 Netlify：Import 這個 repo 即可（`netlify.toml` 已設定，push `main` 自動佈署）。無後端、無環境變數。

@@ -39,6 +39,7 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 ## 1.5 佈署狀態
 
 - 佈署平台：Netlify（`netlify.toml` 已在 repo 根目錄：Node 22、`npm run build`、發佈 `dist/`）。
+- PWA：`public/manifest.webmanifest`＋圖示（192/512），可「加入主畫面」standalone 開啟。**刻意不加 service worker**——離線快取會造成舊版 bundle 卡住的問題，對頻繁更新的 app 是負資產,不要加。
 - 連接方式：Netlify → Add new site → Import an existing project → 選 `key8745-netizen/VentureQuest`，之後每次 push `main` 自動佈署。
 - 沒有其他基礎設施：無網域、無環境變數、無 serverless functions。
 
@@ -301,6 +302,7 @@ npm test
 - [x] 🔥 連續天數 streak＋Org-Tree 階段提示。
 - [x] 顧問 API 錯誤白話化。
 - [x] Gemini 雙供應商支援（key 前綴自動偵測、免費額度友善）。
+- [x] PWA 加入主畫面（manifest＋圖示,無 SW）。
 - [x] API key 隱形字元自動清除＋供應商偵測顯示。
 - [x] 使用者完整狀態檔（dossier）餵入顧問＋透明檢視。
 
