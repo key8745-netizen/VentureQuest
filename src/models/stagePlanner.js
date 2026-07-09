@@ -107,6 +107,43 @@ const STAGE_TEMPLATES = [
   },
 ];
 
+// Copy variants when the user has already left their day job: same
+// stage ids (progress survives editing the profile), different framing
+// — no "prepare to quit" for someone who already quit.
+const LEFT_JOB_OVERRIDES = {
+  explore: {
+    subtitle: '確認有人願意付錢',
+  },
+  prepare: {
+    subtitle: '收入變穩：在跑道燒完前站穩',
+    goals: {
+      'prepare-g1': '月收入連續 3 個月覆蓋一半的生活費',
+      'prepare-g2': '手上隨時留著 6 個月以上的生活費跑道',
+    },
+    tasks: {
+      'prepare-1': '算出你的生存跑道：存款 ÷ 月生活費 ＝ 還能撐幾個月',
+      'prepare-2': '記錄本月收入，和月生活費的一半比一比',
+      'prepare-6': '訂出止損條件：跑道剩 3 個月時要調整方向或先找收入',
+    },
+  },
+};
+
+function applyOverrides(stage, overrides) {
+  if (!overrides) return stage;
+  return {
+    ...stage,
+    subtitle: overrides.subtitle ?? stage.subtitle,
+    goals: stage.goals.map((goal) => ({
+      ...goal,
+      label: overrides.goals?.[goal.id] ?? goal.label,
+    })),
+    tasks: stage.tasks.map((task) => ({
+      ...task,
+      label: overrides.tasks?.[task.id] ?? task.label,
+    })),
+  };
+}
+
 /**
  * customizations: advisor-suggested extras the user adopted, keyed by
  * stage id — { [stageId]: { goals: [...], tasks: [...] } }.
@@ -121,7 +158,11 @@ export function buildStagePlan({ profile, customizations = {} }) {
 
   return {
     targetLabel,
-    stages: STAGE_TEMPLATES.map((stage) => {
+    stages: STAGE_TEMPLATES.map((rawStage) => {
+      const stage = applyOverrides(
+        rawStage,
+        profile.employment === 'left' ? LEFT_JOB_OVERRIDES[rawStage.id] : null,
+      );
       const extra = customizations[stage.id] ?? {};
       return {
         ...stage,
