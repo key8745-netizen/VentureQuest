@@ -84,6 +84,28 @@ await advisorCard.locator('.advisor-input-row button').click();
 await advisorCard.locator('.advisor-reply').waitFor();
 await snap('stage-advisor');
 
+// Today's task: complete it (streak appears), then rotate to the next
+await page.locator('.micro-task input').click();
+await page.waitForSelector('.streak');
+if ((await page.locator('.task-meta button').count()) > 0) {
+  await page.locator('.task-meta button').click();
+}
+await snap('today-task-streak');
+
+// Weekly review: log the week, one-click navigator diagnosis (mock)
+const review = page.locator('.card:has(h2:has-text("每週回顧"))');
+await review.locator('input[type=number]').nth(0).fill('6');
+await review.locator('input[type=number]').nth(1).fill('20');
+await review.locator('input[type=text]').fill('客人太少');
+await review.locator('button.primary').click();
+await review.locator('.advisor-quick button').click();
+await review.locator('.advisor-reply').waitFor();
+await snap('weekly-review-diagnosis');
+
+// Dossier transparency view
+await page.locator('.dossier-view summary').click();
+await snap('dossier');
+
 // PRO terminology mode
 await page.click('button:has-text("切換成專業")');
 await snap('pro-mode');
