@@ -6,6 +6,7 @@ import {
   buildStagePrompt,
   detectProvider,
   sanitizeApiKey,
+  todayKey,
   DAILY_CALL_LIMIT,
 } from '../models/advisor.js';
 
@@ -67,7 +68,7 @@ export default function AdvisorPanel({
       <p className="muted">
         依你的階段自動選模型:目前是「{activeStage.label}」→ {MODEL_LABELS[model] ?? model}。
         每天最多 {DAILY_CALL_LIMIT} 次。
-        {apiKey ? `(今天已用 ${usage?.date === new Date().toISOString().slice(0, 10) ? usage.count : 0} 次)` : ''}
+        {apiKey ? `(今天已用 ${usage?.date === todayKey() ? usage.count : 0} 次)` : ''}
       </p>
 
       {apiKey ? (

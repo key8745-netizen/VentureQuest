@@ -17,6 +17,7 @@ import {
   buildGeminiPayload,
   sanitizeApiKey,
   buildDossier,
+  todayKey,
   DAILY_CALL_LIMIT,
   HISTORY_KEEP_LIMIT,
   HISTORY_SEND_LIMIT,
@@ -391,4 +392,18 @@ test('diagnosis prompt reads the dossier when provided', () => {
   assert.ok(!prompt.includes('最近的每週回顧'));
   assert.ok(prompt.includes('154'));
   assert.ok(prompt.includes('耐心'));
+});
+
+test('todayKey uses the local date, not UTC', () => {
+  const originalTZ = process.env.TZ;
+  process.env.TZ = 'Asia/Taipei';
+  try {
+    // 18:00 UTC = 02:00 next day in Taipei — the local date must win.
+    assert.equal(todayKey(new Date('2026-07-08T18:00:00Z')), '2026-07-09');
+    // 12:00 UTC = 20:00 same day in Taipei.
+    assert.equal(todayKey(new Date('2026-07-08T12:00:00Z')), '2026-07-08');
+  } finally {
+    if (originalTZ === undefined) delete process.env.TZ;
+    else process.env.TZ = originalTZ;
+  }
 });
