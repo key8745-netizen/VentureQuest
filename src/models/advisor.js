@@ -391,8 +391,14 @@ export function buildMessages(history, question, limit = HISTORY_SEND_LIMIT) {
   ];
 }
 
-export function todayKey() {
-  return new Date().toISOString().slice(0, 10);
+/**
+ * Local-date key (YYYY-MM-DD). Not toISOString(): that is UTC, which
+ * would put an early-morning task in Taipei (UTC+8) on yesterday's
+ * date — wrong streaks and a daily limit that resets at 08:00.
+ */
+export function todayKey(date = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 const MOCK_REPLY = {
