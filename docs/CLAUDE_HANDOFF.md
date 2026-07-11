@@ -89,7 +89,7 @@ npm run qa:mobile   # 手機版截圖 QA(見下)
 
 ### Mobile screenshot QA
 
-`scripts/mobile-qa.mjs` 用 Playwright 在 390×844 視窗走完整流程(精靈、問 AI、拆解、專業模式),截 7 張全頁圖到 `qa-screenshots/`(已 gitignore)。全程 mock 模式,0 成本離線可跑:
+`scripts/mobile-qa.mjs` 用 Playwright 在 390×844 視窗走完整流程(精靈、問 AI、拆解、streak、每週回顧＋診斷、dossier、專業模式),截 10 張全頁圖到 `qa-screenshots/`(已 gitignore)。全程 mock 模式,0 成本離線可跑:
 
 ```bash
 npm run build && npm run preview &
