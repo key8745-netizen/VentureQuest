@@ -41,6 +41,16 @@ export default function WeeklyReview({
   const [hours, setHours] = useState(current ? String(current.hours) : '');
   const [units, setUnits] = useState(current ? String(current.units) : '');
   const [note, setNote] = useState(current?.note ?? '');
+  // If the ISO week rolls over while the app stays open, the inputs
+  // above (initialized at mount) would silently carry last week's
+  // numbers into the new week. Reset them when the label changes.
+  const [seenWeek, setSeenWeek] = useState(week);
+  if (seenWeek !== week) {
+    setSeenWeek(week);
+    setHours(current ? String(current.hours) : '');
+    setUnits(current ? String(current.units) : '');
+    setNote(current?.note ?? '');
+  }
 
   const survival = calculateSurvivalLine(financial);
   // A month is ~4.33 weeks; round up so the weekly bar stays honest.
