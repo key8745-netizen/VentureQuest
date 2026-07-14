@@ -77,6 +77,15 @@ await firstGoal.locator('.advisor-steps button.mini').click();
 await firstGoal.locator('.goal-children li').first().waitFor();
 await snap('goal-breakdown');
 
+// Skill tree: active stage opens by default; tap a locked stage to peek
+const skillCard = page.locator('.card:has(.skill-tree)');
+await skillCard.locator('.skill-goals').first().waitFor();
+await skillCard
+  .locator('.skill-branch.skill-locked .skill-node-button')
+  .first()
+  .click();
+await snap('skill-tree');
+
 // Stage advisor (mock)
 const advisorCard = page.locator('.card:has(h2:has-text("AI 創業顧問"))');
 await advisorCard.locator('.advisor-input-row input').fill('第一步該做什麼?');

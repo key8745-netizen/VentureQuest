@@ -19,6 +19,7 @@ test('switches key labels between professional and plain language', () => {
     'stageClearContinue',
     'targetLine',
     'weeklyReview',
+    'skillTree',
   ];
   for (const key of keys) {
     const pro = getCopy(key, modes.PRO);

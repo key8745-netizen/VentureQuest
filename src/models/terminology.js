@@ -99,6 +99,10 @@ const COPY = {
     pro: '勾選完成本階段全部條件後，自動進入下一階段。',
     plain: '把這一關的條件都打勾，就會自動進下一關。',
   },
+  skillTree: {
+    pro: '成長路徑總覽（Skill Tree）',
+    plain: '技能樹:你離大目標還有幾步',
+  },
   orgTree: {
     pro: '營運節點結構（Org-Tree）',
     plain: '你的小事業長什麼樣子',
