@@ -198,6 +198,7 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 - `detectProvider(apiKey)`／`pickModelForStage(stageId, apiKey)`／`sanitizeApiKey`：依 key 前綴選供應商與分級模型;key 清成可見 ASCII。
 - `buildDossier({...})`：使用者完整狀態檔（方向、即時財務＋生死線／目標線、旅程進度、已完成階段、執行力 streak、最近 4 週實際數字），stage／goal／diagnosis 提示詞都優先讀它（diagnosis 有 dossier 時不重複附回顧區塊）;AdvisorPanel 提供「查看顧問看到的完整狀態」透明檢視＋「複製狀態」按鈕（可貼到任何 AI 接續諮詢）。
 - `buildGeminiPayload`：Gemini generateContent 請求體（assistant→model 角色映射、token 上限）。
+  - 模型 ID `gemini-2.5-flash-lite` / `gemini-2.5-flash` / `gemini-2.5-pro` 已於 2026-07 對官方文件驗證過:三者都存在且免費層可用（每日各約 1000／250／100 次,遠高於我們的 20 次上限）。Gemini 3 系列當時只有 preview ID 且資訊混亂,刻意不採用;下次升級模型前先查 ai.google.dev/gemini-api/docs/models。
 - `buildStagePrompt` / `buildQuestionPrompt` / `buildGoalPrompt`：系統提示詞。stage/goal 版吃財務面板的即時數字（蓋過精靈快照），stage 版並附每個過關條件的完成狀態（含拆解進度），明確要求不重複建議已完成的事。
 - `parseAdvisorReply(text)`：解析 JSON 回覆，clamp：最多 3 任務（5–30 分鐘）、2 目標、5 個拆解步驟；answer 只接受非負數字或 80 字內字串。
 - `canAskToday` / `recordCall` / `DAILY_CALL_LIMIT`：每日呼叫上限。
@@ -306,6 +307,7 @@ npm test
 - [x] 已離職者的階段文案變體（跑道框架）。
 - [x] API key 隱形字元自動清除＋供應商偵測顯示。
 - [x] 使用者完整狀態檔（dossier）餵入顧問＋透明檢視。
+- [x] 審計修正:每日日界線改用本地時間（時區 bug）、每週回顧跨週自動重設輸入框、Gemini 模型 ID 對官方文件驗證。
 
 ### P2
 
