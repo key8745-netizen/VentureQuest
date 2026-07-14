@@ -463,7 +463,12 @@ function App() {
       </main>
 
       <footer className="app-footer">
-        <p>0 成本・純前端・資料只存在你的瀏覽器</p>
+        <p>
+          0 成本・純前端・資料只存在你的瀏覽器
+          {typeof __BUILD_TIME__ !== 'undefined' && (
+            <span className="build-time">・版本 {__BUILD_TIME__}</span>
+          )}
+        </p>
       </footer>
     </div>
   );
