@@ -568,6 +568,130 @@ button.mini {
   margin-top: 8px;
 }
 
+/* Skill tree — vertical spine with lit / active / locked nodes. */
+.skill-tree {
+  position: relative;
+  padding-left: 20px;
+}
+
+.skill-tree::before {
+  content: '';
+  position: absolute;
+  left: 19px;
+  top: 20px;
+  bottom: 20px;
+  width: 2px;
+  background: var(--line);
+}
+
+.skill-node {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  margin: 8px 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--card);
+  text-align: left;
+}
+
+.skill-node-button {
+  cursor: pointer;
+  font-size: inherit;
+}
+
+.skill-icon {
+  font-size: 1.3rem;
+  margin-left: -32px;
+  background: var(--card);
+  border: 2px solid var(--line);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.skill-node-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.skill-node-body .muted {
+  font-size: 0.8rem;
+}
+
+.skill-caret {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+.skill-done .skill-icon,
+.skill-target-reached .skill-icon,
+.skill-start .skill-icon {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.skill-done .skill-node {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.skill-active .skill-icon {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-soft);
+}
+
+.skill-active .skill-node {
+  border-color: var(--accent);
+}
+
+.skill-locked {
+  opacity: 0.55;
+}
+
+.skill-goals {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0 0 0 28px;
+}
+
+.skill-goals li {
+  margin: 6px 0;
+  font-size: 0.88rem;
+}
+
+.skill-goal-mark {
+  margin-right: 6px;
+}
+
+.skill-goal-done > .skill-goal-mark {
+  color: var(--accent);
+}
+
+.skill-goal-done > .skill-goal-label {
+  color: var(--accent);
+}
+
+.skill-goal-todo > .skill-goal-label {
+  color: var(--muted);
+}
+
+.skill-goal-children {
+  list-style: none;
+  margin: 4px 0 0;
+  padding-left: 20px;
+  border-left: 1px dashed var(--line);
+}
+
 .app-footer {
   text-align: center;
   color: var(--muted);

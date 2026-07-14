@@ -7,6 +7,7 @@ import OrgTreePreview from './components/OrgTreePreview.jsx';
 import OnboardingWizard from './components/OnboardingWizard.jsx';
 import AdvisorPanel from './components/AdvisorPanel.jsx';
 import WeeklyReview from './components/WeeklyReview.jsx';
+import SkillTree from './components/SkillTree.jsx';
 import { createStarterOrgTree } from './models/orgTree.js';
 import {
   buildStagePlan,
@@ -398,6 +399,12 @@ function App() {
               advisorHistories={state.advisorHistories}
               onAdvisorHistoryChange={setAdvisorHistory}
               dossier={dossier}
+            />
+            <SkillTree
+              mode={state.mode}
+              plan={plan}
+              completedGoalIds={state.completedGoalIds}
+              breakdowns={state.breakdowns}
             />
             <AdvisorPanel
               mode={state.mode}
