@@ -6,7 +6,10 @@
 //   - model tier depends on the stage (cheap early, strong late)
 //   - one reply is capped at MAX_REPLY_TOKENS
 //   - at most DAILY_CALL_LIMIT calls per day
-//   - without an API key the app falls back to a canned mock reply
+//   - without an API key nothing is sent anywhere: each surface passes
+//     its own locally-computed reply as mockReply (see localAdvisor.js,
+//     localGoalGuide.js, localQuestionHelp.js), so the app still
+//     advises — from the user's own numbers instead of a model.
 
 import Anthropic from '@anthropic-ai/sdk';
 import {
@@ -396,24 +399,16 @@ export function todayKey(date = new Date()) {
   return localDayKey(date);
 }
 
+// Safety net only. Every real surface passes its own locally-computed
+// reply (see localAdvisor.js / localGoalGuide.js / localQuestionHelp.js),
+// so this fires only if a new caller forgets to.
 const MOCK_REPLY = {
-  reply:
-    '(示範回覆)還沒設定 API key,所以這是寫死的範例。加入你自己的 Anthropic API key 後,顧問會根據你的產業給具體建議。下面是一個示範任務,你可以按「加入」試試整個流程。',
-  tasks: [{ label: '(示範)花 15 分鐘查 3 個競爭對手的價格', minutes: 15 }],
+  reply: '目前沒有設定 API key。可以繼續使用,顧問會依你填的數字給建議。',
+  tasks: [],
   goals: [],
   steps: [],
 };
 
-export const MOCK_GOAL_REPLY = {
-  reply:
-    '(示範回覆)還沒設定 API key。設定後,顧問會解釋這個目標怎麼達成,拆成你能做到的子項目,需要練功的還會給你每日訓練任務。下面是示範。',
-  tasks: [{ label: '(示範)每天花 15 分鐘練習這個目標需要的技能', minutes: 15 }],
-  goals: [],
-  steps: [
-    { label: '(示範)查清楚這個目標需要什麼條件' },
-    { label: '(示範)把第一個條件排進這週的行程' },
-  ],
-};
 
 /** Turns SDK/API errors into plain-language messages for the chat UI. */
 export function describeAdvisorError(error) {
@@ -438,13 +433,6 @@ export function describeAdvisorError(error) {
   return `發生錯誤:${message}`;
 }
 
-export const MOCK_DIAGNOSIS_REPLY = {
-  reply:
-    '(示範回覆)還沒設定 API key。設定後,顧問會根據你這週的實際數字診斷有沒有走偏,並耐心規劃下週怎麼走回階段目標。下面是示範建議。',
-  tasks: [{ label: '(示範)挑一個賣最好的品項,下週主打它', minutes: 15 }],
-  goals: [],
-  steps: [],
-};
 
 /** Request body for Gemini's generateContent (roles: assistant → model). */
 export function buildGeminiPayload(systemPrompt, messages) {

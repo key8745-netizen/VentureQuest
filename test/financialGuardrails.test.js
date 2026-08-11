@@ -178,3 +178,44 @@ test('weekly progress reports unviable rather than dividing by a bad margin', ()
   });
   assert.equal(describeWeeklyProgress({ units: 5, lines }).viable, false);
 });
+
+// Regression: the wizard summary fed a profile straight into the money
+// maths. When the cost fields were renamed, the old key silently read
+// undefined and the summary rendered "每月至少賣 NaN 個單位".
+test('a profile built by the wizard never produces NaN lines', async () => {
+  const { createProfile, QUESTION_FLOW } = await import('../src/models/onboarding.js');
+
+  const profiles = [
+    createProfile({ employment: 'employed' }),
+    createProfile({
+      idea: '便當店',
+      employment: 'left',
+      businessFixedCost: 1200,
+      livingCost: 30000,
+      unitPrice: 500,
+      unitCost: 200,
+      weeklyHours: 8,
+      targetMonthlyIncome: 30000,
+    }),
+  ];
+
+  for (const profile of profiles) {
+    const lines = calculateMoneyLines({
+      ...profile,
+      employment: profile.employment,
+      targetMonthlyIncome: profile.targetMonthlyIncome,
+    });
+    for (const [key, value] of Object.entries(lines)) {
+      assert.ok(
+        typeof value !== 'number' || Number.isFinite(value),
+        `${key} must not be NaN — it renders straight into the summary`,
+      );
+    }
+  }
+
+  // Every number the wizard collects must be a field the maths reads.
+  const numberIds = QUESTION_FLOW.filter((q) => q.type === 'number').map((q) => q.id);
+  for (const id of ['businessFixedCost', 'livingCost', 'unitPrice', 'unitCost']) {
+    assert.ok(numberIds.includes(id), `${id} must be asked by the wizard`);
+  }
+});

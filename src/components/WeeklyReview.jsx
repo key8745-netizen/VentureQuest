@@ -12,8 +12,8 @@ import AdvisorChat from './AdvisorChat.jsx';
 import {
   buildDiagnosisPrompt,
   pickModelForStage,
-  MOCK_DIAGNOSIS_REPLY,
 } from '../models/advisor.js';
+import { localAdvice } from '../models/localAdvisor.js';
 
 /**
  * Once-a-week honesty ritual: log the hours actually spent and units
@@ -25,6 +25,7 @@ export default function WeeklyReview({
   financial,
   reviews,
   onReviewsChange,
+  taskLog,
   evidenceGoalIds = [],
   profile,
   activeStage,
@@ -90,7 +91,11 @@ export default function WeeklyReview({
     .reverse();
   // The payoff for filling this form in honestly: numbers, not
   // checkboxes, are what closed these goals.
-  const earned = deriveEvidence({ reviews, financial }).filter((item) =>
+  const earned = deriveEvidence({
+    reviews,
+    financial,
+    employment: profile.employment,
+  }).filter((item) =>
     evidenceGoalIds.includes(item.goalId),
   );
 
@@ -222,7 +227,12 @@ export default function WeeklyReview({
               label: `診斷 ${week}:我走偏了嗎?下週怎麼走?`,
               question: `幫我診斷 ${week} 這週的狀況:我有沒有偏離「${activeStage.label}」的階段目標?下週該把重心放在哪裡?`,
             }}
-            mockReply={MOCK_DIAGNOSIS_REPLY}
+            mockReply={localAdvice({
+              profile,
+              financial,
+              weeklyReviews: reviews,
+              taskLog,
+            })}
             placeholder="也可以自己問,例如:我一直卡在找客人…"
           />
         </>

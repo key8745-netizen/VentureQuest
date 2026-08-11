@@ -9,6 +9,7 @@ import {
   todayKey,
   DAILY_CALL_LIMIT,
 } from '../models/advisor.js';
+import { localAdvice } from '../models/localAdvisor.js';
 
 const MODEL_LABELS = {
   'claude-haiku-4-5': 'Claude Haiku(最省)',
@@ -26,6 +27,8 @@ export default function AdvisorPanel({
   onApiKeyChange,
   profile,
   financial,
+  weeklyReviews,
+  taskLog,
   activeStage,
   completedGoalIds,
   breakdowns,
@@ -148,6 +151,7 @@ export default function AdvisorPanel({
         onUsageChange={onUsageChange}
         onAdoptTask={(task) => onAdoptTask(activeStage.id, task)}
         onAdoptGoal={(goal) => onAdoptGoal(activeStage.id, goal)}
+        mockReply={localAdvice({ profile, financial, weeklyReviews, taskLog })}
         placeholder={`關於「${activeStage.label}」階段,想問什麼?`}
       />
     </section>

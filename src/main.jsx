@@ -489,6 +489,8 @@ function App() {
               onApiKeyChange={setApiKey}
               profile={state.profile}
               financial={state.financial}
+              weeklyReviews={state.weeklyReviews}
+              taskLog={state.taskLog}
               completedGoalIds={provenGoalIds}
               breakdowns={state.breakdowns}
               activeStage={activeStage}
@@ -506,6 +508,7 @@ function App() {
               onReviewsChange={(weeklyReviews) =>
                 setState((prev) => withEvidence({ ...prev, weeklyReviews }))
               }
+              taskLog={state.taskLog}
               evidenceGoalIds={state.evidenceGoalIds}
               profile={state.profile}
               activeStage={activeStage}

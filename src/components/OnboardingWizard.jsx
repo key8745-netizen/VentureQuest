@@ -6,12 +6,13 @@ import {
 } from '../models/onboarding.js';
 import { buildStagePlan } from '../models/stagePlanner.js';
 import {
-  calculateSurvivalLine,
+  calculateMoneyLines,
   suggestAfterWorkPace,
 } from '../models/financialGuardrails.js';
 import AdvisorChat from './AdvisorChat.jsx';
 import { getCopy } from '../models/terminology.js';
 import { buildQuestionPrompt, pickModelForStage } from '../models/advisor.js';
+import { localQuestionHelp } from '../models/localQuestionHelp.js';
 
 /**
  * Guided interview shown before the dashboard: one question per
@@ -72,7 +73,11 @@ export default function OnboardingWizard({
   if (onSummary) {
     const profile = createProfile(answers);
     const plan = buildStagePlan({ profile });
-    const survival = calculateSurvivalLine(profile);
+    const lines = calculateMoneyLines({
+      ...profile,
+      employment: profile.employment,
+      targetMonthlyIncome: profile.targetMonthlyIncome,
+    });
     const pace = suggestAfterWorkPace({
       weeklyHours: profile.weeklyHours,
       weeklyUnits: 1,
@@ -85,9 +90,12 @@ export default function OnboardingWizard({
 
         <ul className="wizard-summary">
           <li>
-            {survival.viable
-              ? `生死線：每月至少賣 ${survival.unitsToSurvive} 個單位，賣一個留下 ${survival.unitMargin} 元。`
-              : '注意：現在的價格賣一個賠一個，第一階段就會帶你調整它。'}
+            {!lines.viable
+              ? '注意：現在的價格賣一個賠一個，第一階段就會帶你調整它。'
+              : lines.salaryCoversLiving
+                ? `賣一個留下 ${lines.unitMargin} 元。事業本身不賠錢要每月 ${lines.survivalUnits} 個；` +
+                  `做到每月 ${lines.replacementUnits} 個，事業就養得起你的生活費。`
+                : `生死線：每月至少賣 ${lines.survivalUnits} 個單位，賣一個留下 ${lines.unitMargin} 元。`}
           </li>
           <li>每週可投入 {profile.weeklyHours} 小時。{pace.risk === 'burnout-risk' ? '這已經偏多，小心過勞。' : '這個節奏可以持續。'}</li>
           <li>你的起點：第 1 階段「{plan.stages[0].label}」——{plan.stages[0].subtitle}。</li>
@@ -174,17 +182,7 @@ export default function OnboardingWizard({
           usage={usage}
           onUsageChange={onUsageChange}
           onAdoptAnswer={(answer) => setDraft(String(answer))}
-          mockReply={{
-            reply:
-              '(示範回覆)還沒設定 API key。設定後,顧問會針對這一題給你具體建議,並附上可以一鍵填入的答案,像下面這樣。',
-            tasks: [],
-            goals: [],
-            steps: [],
-            answer:
-              question.type === 'number'
-                ? 20000
-                : '(示範)賣給附近上班族的平價健康便當',
-          }}
+          mockReply={localQuestionHelp(question.id, answers)}
           placeholder="例如:我不知道固定成本要算哪些…"
         />
       )}

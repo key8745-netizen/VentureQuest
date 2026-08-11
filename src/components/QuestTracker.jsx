@@ -16,8 +16,8 @@ import {
   buildGoalPrompt,
   pickModelForStage,
   todayKey,
-  MOCK_GOAL_REPLY,
 } from '../models/advisor.js';
+import { localGoalGuide } from '../models/localGoalGuide.js';
 import { computeStreak } from '../models/momentum.js';
 
 /**
@@ -117,7 +117,7 @@ function GoalItem({
           onUsageChange={onUsageChange}
           onAdoptSteps={(steps) => onAddBreakdown(goal.id, steps)}
           onAdoptTask={(task) => onAdoptTask(stage.id, task)}
-          mockReply={MOCK_GOAL_REPLY}
+          mockReply={localGoalGuide(goal.id)}
           placeholder="例如:這個目標怎麼達成?我做不到怎麼辦?"
         />
       )}

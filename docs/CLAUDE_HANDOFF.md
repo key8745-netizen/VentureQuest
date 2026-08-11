@@ -15,7 +15,8 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 - 五階段路線圖：探索驗證 → 起飛準備 → 落地營運 → 穩定成長 → 規模擴張。已離職者（employment=left）自動套用文案變體：第二關改「在跑道燒完前站穩」（生存跑道、止損條件），id 不變所以切換工作狀態不影響進度。每階段有可勾選的過關條件（goals）＋ 5–30 分鐘 micro-tasks。過關瞬間跳一次性慶祝彈窗（記錄在 `celebratedStageIds`，重新整理不重跳）。
 - AI 創業顧問：使用者自備 API key（存瀏覽器獨立 key，不隨 Export 匯出），**雙供應商**依 key 前綴自動偵測——Anthropic（sk-ant-）分級 Haiku→Sonnet→Opus；Google Gemini（AIza,AI Studio 有免費額度）分級 Flash-Lite→Flash→Pro。Gemini 走瀏覽器 fetch 直連 generateContent。顧問可建議新任務／過關條件，使用者按「加入」採用。
 - 目標遞迴拆解：每個過關條件（含子項目）旁有「問 AI」，顧問解釋怎麼達成、可拆成最多 5 個可勾選子項目，缺技能／資格時還可給最多 3 個 5–30 分鐘的訓練任務（採用後進該階段的每日任務輪替）（存在 `breakdowns`，可無限層遞迴）。有子項目的目標由子項目全勾自動完成，母項目 checkbox 變唯讀。AI 加入的項目（子項目、採用的過關條件）都可用「✕」移除，整個子樹一起清掉；子項目清空後母項目恢復可直接勾選。內建的階段條件不可移除。
-- AI 成本防護欄（已寫死在 `advisor.js`）：每日 20 次呼叫上限、單次回覆 1024 tokens、無 key 時 fallback 到寫死的 mock 回覆。
+- AI 成本防護欄（已寫死在 `advisor.js`）：每日 20 次呼叫上限、單次回覆 1024 tokens。
+- **無 key 也要能用**（`localAdvisor.js`／`localGoalGuide.js`／`localQuestionHelp.js`）：以前沒 key 時四個 AI 入口全部回傳「(示範回覆)請設定 API key」,等於預設體驗是一份靜態清單加四顆死按鈕——而多數目標使用者根本不會去申請 key。現在沒 key 時改用規則顧問讀使用者自己的數字給診斷,輸出格式與 `parseAdvisorReply` 相同,所以「加入」按鈕照常運作;帶 `mock: true` 所以不會進 LLM 上下文也不算 API 額度。**加新的 AI 入口時,一定要一起給 `mockReply`**,否則會退回 `advisor.js` 的保底字串。
 - 專業術語 / 街頭白話切換。
 - 防呆：`loadState` 對每個欄位做型別檢查（壞掉的值退回預設）；全域 ErrorBoundary 提供「清除資料重新開始」而不是白屏。
 - 財務生死線／離職線：成本**必須**分成 `businessFixedCost`（事業支出）和 `livingCost`（個人生活費）兩筆。在職者（`employment !== 'left'`）的生活費由薪水支付，**絕對不要併進生死線**——那會憑空捏造一筆赤字，然後每週回報使用者「進度落後」。在職者的主數字是離職線（事業養得起生活費要賣幾個），生死線只算事業支出；已離職者才把生活費併進生死線。`calculateMoneyLines` 一次算出全部並用 `leadingLine` 指出哪個該放大字，財務面板和每週回顧都讀它，不要各算各的。
@@ -36,7 +37,7 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 - 不要加金流。
 - 不要加大型狀態管理庫。
 - 不要加複雜 graph canvas。
-- 不要移除或放寬 AI 成本防護欄（每日上限、token 上限、mock fallback）。
+- 不要移除或放寬 AI 成本防護欄（每日上限、token 上限、無 key 時走本機顧問而不是硬要連網）。
 - 不要把 API key 放進可 Export 的 app state（它存在獨立的 `venturequest:apikey:v1`）。
 - 不要把任何產業詞寫進底層 schema，例如 `foodCost`、`menuItem`、`roomNight`。
 
@@ -232,6 +233,14 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 - `migrateState(state)`:對 `financial` 和 `profile` 都跑一次。冪等。
 - 在 `loadState` 裡呼叫,新增遷移就加在這裡,不要散在元件。
 
+### `src/models/localAdvisor.js`／`localGoalGuide.js`／`localQuestionHelp.js`
+
+沒有 API key 時的顧問（純規則,0 成本,不連網）:
+
+- `localAdvice({ profile, financial, weeklyReviews, taskLog })`:讀使用者實際數字,依優先序挑一條診斷（單位經濟虧損 > 有投入沒收入 > 沒資料 > 賣過但停滯 > 未達事業損益兩平 > 已獲利爬升）,再視情況附一則提醒（過勞／連續中斷）。回傳 `{ reply, tasks, goals, steps, mock: true }`。診斷文案一律引用使用者的真實數字,不要寫成通用雞湯——那正是它取代掉的東西。
+- `localGoalGuide(goalId)`:19 個內建過關條件的手寫拆解（固定集合,不需要模型）。找不到就退到通用拆法。加新的內建 goal 時要一起補（有測試守住）。
+- `localQuestionHelp(questionId, answers)`:8 題精靈的手寫說明,能從已填答案推導時附「建議答案」一鍵填入（例如售價 = 成本 × 2、目標收入 = 生活費）。**推不出來就不要給數字**,寧可只給說明。
+
 ### `src/models/evidence.js`
 
 實績驅動進度（唯一不能自評的進度來源）:
@@ -281,12 +290,14 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
 ## 5. 測試狀態
 
-目前測試覆蓋（88/88 pass）：
+目前測試覆蓋（105/105 pass）：
 
 - 任務重複週期：每階段至少 1 個 daily、daily 隔天回來但當天不回來、weekly 撐完整個 ISO 週、取消勾選釋放任務、清空所有一次性任務後仍有事可做、「沒時間」與「沒任務」可分辨。
 - 實績驅動：0 單量不算數、賣出 1 個完成第一筆付款條件、四週合計達生死線才算損益平衡（週數不足或單量不足都不算）、虧損模型永遠不成立、回顧滾出視窗後已達成條件不倒退。
 - 成本拆分：在職者的生死線只含事業支出、離職者才含生活費、彈性工時仍算有薪水、目標線永遠 ≥ 離職線、負數輸入不會縮小門檻、小週次讀成進度百分比而非配額缺口、dossier 明確告訴顧問不要把生活費算進生死線。
 - 遷移：舊 `monthlyFixedCost` 落到生活費、冪等、髒資料不炸、profile 與 financial 都遷移、進度不遺失。
+- 本機顧問：虧損診斷優先於一切、引用真實時數與單量、無資料時要資料而非亂猜、獲利者看到離職進度百分比、提醒不會蓋掉主診斷、輸出永遠符合採用按鈕的 clamp、19 個內建 goal 都有拆解、精靈建議答案通過自己欄位的驗證。
+- 迴歸：精靈摘要不會因為欄位改名而印出 NaN（`calculateMoneyLines` 對 `createProfile` 產出的 profile 全欄位有限）。
 
 - 財務生死線、虧錢模型拒絕、在職節奏風險判斷。
 - 引導問答：題目順序、答案驗證、profile 產生（含探索分支與 schema 檢查）。
@@ -351,14 +362,14 @@ npm test
 - [x] 任務重複週期（daily/weekly）＋空狀態分流:解掉「第一關 9 天就沒東西可做」。
 - [x] 實績驅動進度（`evidence.js`）:週回顧的真實數字自動完成過關條件。
 - [x] 成本拆成事業支出／個人生活費,在職者改用離職線,每週回顧改成進度而非配額缺口（含舊 state 就地遷移）。
+- [x] 無 API key 的本機規則顧問（診斷／目標拆解／精靈說明）,取代四個「請設定 key」死路。
 
 ### 下一步（來自 2026-08 產品體檢，按影響排序）
 
-這些是體檢出來、**還沒做**的問題。上面三項（每天有事做、實績驅動進度、成本拆分）已經處理掉最大的流失原因，剩下的照順序做：
+這些是體檢出來、**還沒做**的問題。上面四項（每天有事做、實績驅動進度、成本拆分、無 key 也有顧問）已經處理掉最大的流失原因，剩下的照順序做：
 
-1. **沒有 API key 的預設體驗等於靜態清單**。唯一會因人而異的部分（AI）鎖在 key 後面，而目標使用者多半不會去申請。
-2. **首頁重複**：`SkillTree` 和 `QuestTracker` 的階段地圖顯示幾乎同一份資訊；`OrgTreePreview` 的抽象節點（Operating Unit / Value Delivery）對「想賣出第一個便當」的人沒有意義。考慮砍掉或合併，首頁收斂成三塊：今天做什麼／這個月賺多少／下一關差什麼。
-3. **小瑕疵**：`suggestAfterWorkPace` 算出的 `recommendedWeeklyUnits` 從沒顯示過（只用到 >15 小時的過勞門檻）；`profile.weeklyHours` 除了餵給 AI 之外不影響任何規劃；Import JSON 沒有任何驗證就 spread 進 state。
+1. **首頁重複**：`SkillTree` 和 `QuestTracker` 的階段地圖顯示幾乎同一份資訊；`OrgTreePreview` 的抽象節點（Operating Unit / Value Delivery）對「想賣出第一個便當」的人沒有意義。考慮砍掉或合併，首頁收斂成三塊：今天做什麼／這個月賺多少／下一關差什麼。
+2. **小瑕疵**：`suggestAfterWorkPace` 算出的 `recommendedWeeklyUnits` 從沒顯示過（只用到 >15 小時的過勞門檻）；`profile.weeklyHours` 除了餵給 AI 之外不影響任何規劃；Import JSON 沒有任何驗證就 spread 進 state。
 
 ## 8. 核心商業原則
 
