@@ -4,7 +4,9 @@ import assert from 'node:assert/strict';
 import { deriveEvidence, accrueEvidence } from '../src/models/evidence.js';
 
 // margin 300 → survival line is 100 units per month
-const financial = { monthlyFixedCost: 30000, unitPrice: 500, unitCost: 200 };
+// An already-quit user, so living costs count toward survival and the
+// month's break-even line stays at 100 units.
+const financial = { businessFixedCost: 30000, livingCost: 0, unitPrice: 500, unitCost: 200 };
 
 test('no reported sales proves nothing', () => {
   assert.deepEqual(deriveEvidence({ reviews: [], financial }), []);
@@ -90,7 +92,7 @@ test('an unviable unit economy can never prove break-even', () => {
 
   const goalIds = deriveEvidence({
     reviews,
-    financial: { monthlyFixedCost: 30000, unitPrice: 100, unitCost: 100 },
+    financial: { businessFixedCost: 30000, livingCost: 0, unitPrice: 100, unitCost: 100 },
   }).map((e) => e.goalId);
 
   assert.ok(!goalIds.includes('operate-g3'));

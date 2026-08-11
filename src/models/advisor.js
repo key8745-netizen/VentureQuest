@@ -14,10 +14,7 @@ import {
   calculatePlanProgress,
   getActiveStage,
 } from './stagePlanner.js';
-import {
-  calculateSurvivalLine,
-  calculateTargetLine,
-} from './financialGuardrails.js';
+import { calculateMoneyLines } from './financialGuardrails.js';
 import { computeStreak, localDayKey } from './momentum.js';
 
 export const DAILY_CALL_LIMIT = 20;
@@ -74,12 +71,13 @@ export function pickModelForStage(stageId, apiKey) {
 // panel — they win over the wizard-time snapshot in the profile.
 function describeProfile(profile, financial) {
   const idea = profile.idea || '還在探索方向';
-  const fixed = financial?.monthlyFixedCost ?? profile.monthlyFixedCost;
+  const business = financial?.businessFixedCost ?? profile.businessFixedCost ?? 0;
+  const living = financial?.livingCost ?? profile.livingCost ?? 0;
   const price = financial?.unitPrice ?? profile.unitPrice;
   const cost = financial?.unitCost ?? profile.unitCost;
   return [
     `事業方向:「${idea}」。`,
-    `每月固定成本 ${fixed} 元、單位售價 ${price} 元、單位變動成本 ${cost} 元。`,
+    `事業每月固定成本 ${business} 元、個人每月生活費 ${living} 元、單位售價 ${price} 元、單位變動成本 ${cost} 元。`,
     `每週可投入 ${profile.weeklyHours} 小時,目標月收入 ${profile.targetMonthlyIncome} 元。`,
   ].join('\n');
 }
@@ -124,9 +122,9 @@ export function buildDossier({
   weeklyReviews = [],
   today = todayKey(),
 }) {
-  const survival = calculateSurvivalLine(financial);
-  const target = calculateTargetLine({
+  const lines = calculateMoneyLines({
     ...financial,
+    employment: profile.employment,
     targetMonthlyIncome: profile.targetMonthlyIncome,
   });
   const progress = calculatePlanProgress({ plan, completedGoalIds, breakdowns });
@@ -154,9 +152,11 @@ export function buildDossier({
   return [
     '【使用者完整狀態】',
     `事業方向:「${profile.idea || '還在探索方向'}」;工作狀態:${EMPLOYMENT_LABELS[profile.employment] ?? profile.employment};每週可投入 ${profile.weeklyHours} 小時;目標月收入 ${profile.targetMonthlyIncome} 元。`,
-    `財務:每月固定成本 ${financial.monthlyFixedCost} 元、單位售價 ${financial.unitPrice} 元、單位變動成本 ${financial.unitCost} 元;` +
-      (survival.viable
-        ? `生死線每月 ${survival.unitsToSurvive} 個、目標線每月 ${target.unitsToTarget} 個。`
+    `財務:事業每月固定成本 ${financial.businessFixedCost ?? 0} 元、個人每月生活費 ${financial.livingCost ?? 0} 元、單位售價 ${financial.unitPrice} 元、單位變動成本 ${financial.unitCost} 元;` +
+      (lines.viable
+        ? lines.salaryCoversLiving
+          ? `使用者還有薪水,生活費由薪水支付,所以生死線只算事業支出:每月 ${lines.survivalUnits} 個。離職門檻(事業養得起生活費)每月 ${lines.replacementUnits} 個,目標線每月 ${lines.targetUnits} 個。不要把生活費算進生死線來嚇使用者。`
+          : `使用者已離開正職,生活費要靠事業賺:生死線每月 ${lines.survivalUnits} 個、目標線每月 ${lines.targetUnits} 個。`
         : '目前單位經濟是虧損的(賣一個賠一個),需優先修正。'),
     `旅程:整體過關條件達成 ${progress.completedCount}/${progress.totalCount};已完成階段:${doneStages.length > 0 ? doneStages.join('、') : '尚無'};目前階段:「${active ? active.label : '全部完成'}」。`,
     `執行力:累計完成 ${totalTasksDone} 件每日任務;連續 ${streak} 天${doneToday ? '(今天已完成)' : '(今天還沒完成)'}。`,

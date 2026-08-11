@@ -57,7 +57,9 @@ await snap('wizard-helper');
 await page.fill('.wizard-input', '便當店');
 await page.click('.wizard-actions button.primary');
 await page.click('.wizard-choices .choice:first-child');
-for (const value of ['30000', '100', '55', '8', '30000']) {
+// businessFixedCost, livingCost, unitPrice, unitCost, weeklyHours,
+// targetMonthlyIncome — an employed user whose salary covers the rent.
+for (const value of ['1200', '30000', '100', '55', '8', '30000']) {
   await page.fill('.wizard-input', value);
   await page.click('.wizard-actions button.primary');
 }

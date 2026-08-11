@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { getWeekLabel, upsertReview } from '../models/weeklyReview.js';
 import { deriveEvidence } from '../models/evidence.js';
 import {
-  calculateSurvivalLine,
+  calculateMoneyLines,
+  describeWeeklyProgress,
   suggestAfterWorkPace,
+  WEEKS_PER_MONTH,
 } from '../models/financialGuardrails.js';
 import { getCopy } from '../models/terminology.js';
 import AdvisorChat from './AdvisorChat.jsx';
@@ -54,10 +56,15 @@ export default function WeeklyReview({
     setNote(current?.note ?? '');
   }
 
-  const survival = calculateSurvivalLine(financial);
-  // A month is ~4.33 weeks; round up so the weekly bar stays honest.
-  const weeklyNeed = survival.viable
-    ? Math.ceil(survival.unitsToSurvive / 4.33)
+  const lines = calculateMoneyLines({
+    ...financial,
+    employment: profile.employment,
+    targetMonthlyIncome: profile.targetMonthlyIncome,
+  });
+  // The weekly slice of whichever line actually applies — for an
+  // employed user that is the business's own overhead, not their rent.
+  const weeklyNeed = lines.viable
+    ? Math.ceil(lines.survivalUnits / WEEKS_PER_MONTH)
     : null;
 
   const handleSave = () => {
@@ -74,6 +81,9 @@ export default function WeeklyReview({
   const pace = current
     ? suggestAfterWorkPace({ weeklyHours: current.hours, weeklyUnits: current.units })
     : null;
+  const weekly = current
+    ? describeWeeklyProgress({ units: current.units, lines })
+    : null;
   const past = reviews
     .filter((review) => review.week !== week)
     .slice(-3)
@@ -89,7 +99,10 @@ export default function WeeklyReview({
       <h2>{getCopy('weeklyReview', mode)}</h2>
       <p className="muted">
         本週（{week}）
-        {weeklyNeed != null && `。照生死線換算，每週至少要賣約 ${weeklyNeed} 個單位。`}
+        {weeklyNeed != null &&
+          (lines.salaryCoversLiving
+            ? `。事業本身不賠錢，每週約要賣 ${weeklyNeed} 個；離職門檻是每月 ${lines.replacementUnits} 個。`
+            : `。照生死線換算，每週至少要賣約 ${weeklyNeed} 個單位。`)}
       </p>
 
       <div className="field-grid">
@@ -131,12 +144,34 @@ export default function WeeklyReview({
         <div className="verdict verdict-ok">
           <p>
             本週投入 {current.hours} 小時、賣出 {current.units} 個
-            {weeklyNeed != null &&
-              (current.units >= weeklyNeed
-                ? '，超過生死線的週配額 💪'
-                : `，離週配額還差 ${weeklyNeed - current.units} 個`)}
-            。
+            {weekly?.viable && `，賺回 ${weekly.weeklyContribution} 元毛利`}。
           </p>
+          {weekly?.viable && (
+            <>
+              <p>
+                {weekly.businessProfitable
+                  ? `照這個速度一個月約 ${weekly.monthlyPace} 個，事業本身是賺的（月淨 +${weekly.monthlyNet} 元）✅`
+                  : `照這個速度一個月約 ${weekly.monthlyPace} 個，還沒蓋過事業每月 ${lines.survivalFixedCost} 元的固定支出。`}
+              </p>
+              {/* Distance travelled, never quota missed: the point of
+                  the bar is that a small week still moved it. */}
+              <p>
+                {lines.salaryCoversLiving ? '離職進度' : '生存進度'}：目前速度是離職門檻的{' '}
+                <strong>{weekly.replacementPercent}%</strong>
+                （每月 {weekly.monthlyPace} / {weekly.replacementUnits} 個）
+              </p>
+              <div
+                className="progress-track"
+                role="progressbar"
+                aria-valuenow={Math.min(100, weekly.replacementPercent)}
+              >
+                <div
+                  className="progress-fill"
+                  style={{ width: `${Math.min(100, weekly.replacementPercent)}%` }}
+                />
+              </div>
+            </>
+          )}
           {pace?.risk === 'burnout-risk' && (
             <p>這週投入偏多，小心過勞——可持續比衝刺重要。</p>
           )}

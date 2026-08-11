@@ -144,6 +144,24 @@ button.mini {
   color: var(--danger);
 }
 
+/* One-time migration nudge: visible, but not an error. */
+.notice {
+  background: var(--accent-soft);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  line-height: 1.6;
+}
+
+.field-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
 .verdict-evidence {
   background: var(--accent-soft);
   border: 1px solid var(--accent);

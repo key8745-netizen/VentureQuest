@@ -14,7 +14,7 @@
 //     history is capped at 12 weeks, and receiving your first payment
 //     must not un-happen when that week scrolls out of the window.
 
-import { calculateSurvivalLine } from './financialGuardrails.js';
+import { calculateMoneyLines } from './financialGuardrails.js';
 
 /** Weeks of reviews summed for the break-even rule (~1 month). */
 export const BREAK_EVEN_WINDOW_WEEKS = 4;
@@ -40,16 +40,16 @@ const RULES = [
     // (upsertReview dedupes) but not necessarily consecutive ones — a
     // user who skips a review gets a slightly generous window, which
     // is the right way to be wrong for a motivation tool.
-    check({ reviews, financial }) {
-      const survival = calculateSurvivalLine(financial);
-      if (!survival.viable) return null;
+    check({ reviews, financial, employment }) {
+      const lines = calculateMoneyLines({ ...financial, employment });
+      if (!lines.viable) return null;
 
       const window = reviews.slice(-BREAK_EVEN_WINDOW_WEEKS);
       if (window.length < BREAK_EVEN_WINDOW_WEEKS) return null;
 
       const total = window.reduce((sum, review) => sum + review.units, 0);
-      if (total < survival.unitsToSurvive) return null;
-      return `最近 ${BREAK_EVEN_WINDOW_WEEKS} 週合計賣出 ${total} 個，達到生死線的每月 ${survival.unitsToSurvive} 個`;
+      if (total < lines.survivalUnits) return null;
+      return `最近 ${BREAK_EVEN_WINDOW_WEEKS} 週合計賣出 ${total} 個，達到生死線的每月 ${lines.survivalUnits} 個`;
     },
   },
 ];
@@ -58,11 +58,11 @@ const RULES = [
  * Goals the user's reported numbers currently prove, as
  * [{ goalId, label, reason }] in stage order.
  */
-export function deriveEvidence({ reviews = [], financial }) {
+export function deriveEvidence({ reviews = [], financial, employment }) {
   const sorted = [...reviews].sort((a, b) => a.week.localeCompare(b.week));
 
   return RULES.flatMap((rule) => {
-    const reason = rule.check({ reviews: sorted, financial });
+    const reason = rule.check({ reviews: sorted, financial, employment });
     return reason ? [{ goalId: rule.goalId, label: rule.label, reason }] : [];
   });
 }
@@ -72,11 +72,11 @@ export function deriveEvidence({ reviews = [], financial }) {
  * are never taken back — this is what keeps the ratchet one-way when
  * the review history rolls over.
  */
-export function accrueEvidence({ earnedGoalIds = [], reviews, financial }) {
+export function accrueEvidence({ earnedGoalIds = [], reviews, financial, employment }) {
   const earned = new Set(earnedGoalIds);
   let changed = false;
 
-  for (const { goalId } of deriveEvidence({ reviews, financial })) {
+  for (const { goalId } of deriveEvidence({ reviews, financial, employment })) {
     if (!earned.has(goalId)) {
       earned.add(goalId);
       changed = true;

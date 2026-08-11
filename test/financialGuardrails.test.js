@@ -5,6 +5,9 @@ import {
   calculateSurvivalLine,
   calculateTargetLine,
   suggestAfterWorkPace,
+  calculateMoneyLines,
+  resolveFixedCosts,
+  describeWeeklyProgress,
 } from '../src/models/financialGuardrails.js';
 
 test('calculates the minimum units needed to stay alive', () => {
@@ -70,4 +73,108 @@ test('target line adds the income goal on top of the survival line', () => {
   });
   assert.equal(losing.viable, false);
   assert.equal(losing.unitsToTarget, null);
+});
+
+// The bug this whole split exists to fix: an employed user's salary
+// pays their rent, so folding rent into the break-even line invents a
+// deficit and then reports it as a missed quota every single week.
+const employedCosts = {
+  businessFixedCost: 1200,
+  livingCost: 30000,
+  unitPrice: 500,
+  unitCost: 200,
+  targetMonthlyIncome: 30000,
+};
+
+test('a day job pays the rent, so the survival line only covers the business', () => {
+  const lines = calculateMoneyLines({ ...employedCosts, employment: 'employed' });
+
+  assert.equal(lines.viable, true);
+  assert.equal(lines.unitMargin, 300);
+  assert.equal(lines.survivalUnits, 4, '1200 / 300 — the business alone');
+  assert.equal(lines.replacementUnits, 104, '(1200 + 30000) / 300');
+  assert.equal(lines.leadingLine, 'replacement');
+});
+
+test('after quitting, living costs become survival', () => {
+  const lines = calculateMoneyLines({ ...employedCosts, employment: 'left' });
+
+  assert.equal(lines.survivalUnits, 104, 'no salary left to cover the rent');
+  assert.equal(lines.replacementUnits, 104);
+  assert.equal(lines.leadingLine, 'survival');
+});
+
+test('flexible hours still count as having a salary', () => {
+  const lines = calculateMoneyLines({ ...employedCosts, employment: 'flexible' });
+  assert.equal(lines.survivalUnits, 4);
+  assert.equal(lines.leadingLine, 'replacement');
+});
+
+test('the target line sits above replacement, never below it', () => {
+  for (const employment of ['employed', 'left']) {
+    const lines = calculateMoneyLines({ ...employedCosts, employment });
+    assert.ok(
+      lines.targetUnits >= lines.replacementUnits,
+      `${employment}: earning a target on top cannot need fewer units`,
+    );
+  }
+});
+
+test('a losing unit economy reports unviable whatever the employment', () => {
+  for (const employment of ['employed', 'left']) {
+    const lines = calculateMoneyLines({
+      ...employedCosts,
+      unitPrice: 200,
+      unitCost: 200,
+      employment,
+    });
+    assert.equal(lines.viable, false);
+    assert.equal(lines.leadingLine, 'none');
+  }
+});
+
+test('resolveFixedCosts never lets negative inputs shrink the lines', () => {
+  const resolved = resolveFixedCosts({
+    businessFixedCost: -5000,
+    livingCost: -1,
+    employment: 'left',
+  });
+  assert.equal(resolved.survivalFixedCost, 0);
+  assert.equal(resolved.replacementFixedCost, 0);
+});
+
+test('a small week reads as real progress, not a missed quota', () => {
+  const lines = calculateMoneyLines({ ...employedCosts, employment: 'employed' });
+  const week = describeWeeklyProgress({ units: 3, lines });
+
+  assert.equal(week.weeklyContribution, 900);
+  assert.equal(week.monthlyPace, 13, '3 × 4.33 weeks');
+  assert.equal(
+    week.businessProfitable,
+    true,
+    '13 × 300 = 3900 clears the 1200 business overhead',
+  );
+  assert.equal(week.monthlyNet, 2700);
+  assert.equal(week.replacementPercent, 13, 'progress toward quitting, not failure');
+  assert.equal(week.unitsToReplacementPace, 91);
+});
+
+test('selling nothing is honest without being punitive', () => {
+  const lines = calculateMoneyLines({ ...employedCosts, employment: 'employed' });
+  const week = describeWeeklyProgress({ units: 0, lines });
+
+  assert.equal(week.monthlyPace, 0);
+  assert.equal(week.businessProfitable, false);
+  assert.equal(week.replacementPercent, 0);
+  assert.equal(week.unitsToReplacementPace, lines.replacementUnits);
+});
+
+test('weekly progress reports unviable rather than dividing by a bad margin', () => {
+  const lines = calculateMoneyLines({
+    ...employedCosts,
+    unitPrice: 100,
+    unitCost: 100,
+    employment: 'employed',
+  });
+  assert.equal(describeWeeklyProgress({ units: 5, lines }).viable, false);
 });

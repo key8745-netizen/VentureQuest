@@ -18,7 +18,8 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 - AI 成本防護欄（已寫死在 `advisor.js`）：每日 20 次呼叫上限、單次回覆 1024 tokens、無 key 時 fallback 到寫死的 mock 回覆。
 - 專業術語 / 街頭白話切換。
 - 防呆：`loadState` 對每個欄位做型別檢查（壞掉的值退回預設）；全域 ErrorBoundary 提供「清除資料重新開始」而不是白屏。
-- 財務生死線：每月固定成本、單位售價、單位變動成本、最低單量；另顯示目標線（要賺到目標月收入每月要賣幾個）。
+- 財務生死線／離職線：成本**必須**分成 `businessFixedCost`（事業支出）和 `livingCost`（個人生活費）兩筆。在職者（`employment !== 'left'`）的生活費由薪水支付，**絕對不要併進生死線**——那會憑空捏造一筆赤字，然後每週回報使用者「進度落後」。在職者的主數字是離職線（事業養得起生活費要賣幾個），生死線只算事業支出；已離職者才把生活費併進生死線。`calculateMoneyLines` 一次算出全部並用 `leadingLine` 指出哪個該放大字，財務面板和每週回顧都讀它，不要各算各的。
+- 每週回顧的措辭是「走了多遠」不是「配額差多少」：報這週毛利、目前速度換算月單量、事業本身賺不賺錢、以及離職進度的百分比＋進度條。舊版顯示「離週配額還差 N 個」，讓一個賣了 3 個的新手每週被判一次失敗，是實際的流失原因，不要改回去。
 - 每週回顧＋顧問導航：每 ISO 週記一筆實際投入時數／賣出單位／心得（`weeklyReviews`，同週覆寫、最多留 12 週），對照生死線週配額並提示過勞風險。記完後可一鍵請顧問「診斷」：`buildDiagnosisPrompt` 餵入階段條件狀態＋最近 4 週實際數字＋週配額，指示顧問耐心、不責備、從現在位置設計走回階段目標的最短路徑，並可建議修正用的任務／條件（可採用）。這是「AI 依實際達成狀況規劃走向」的閉環。
 - 今日 micro-task：依照今天可用分鐘數，只顯示一個可以做的小任務；「換一個」可輪替到下一個合適任務（`taskRotation`，持久化），並顯示本階段任務完成度。完成任務會記進 `taskLog`（每日計數），顯示 🔥 連續天數（今天還沒做時以昨天為止計算，取消勾選會扣回）。
 - 任務重複週期（`task.repeat`：`once`／`daily`／`weekly`）：一次性任務是設定工作（寫下固定成本），做完就退場；`daily`／`weekly` 是引擎（開口報價、約訪談、看數字），隔天或下週自動回到清單。**這是 app 能不能被長期使用的關鍵**——每階段的過關條件要幾週到幾個月，但一次性任務只有 5–9 個，沒有重複任務的話第一關 9 天就空了，使用者打開只會看到空狀態然後流失。改 `STAGE_TEMPLATES` 時每個階段至少要留 1 個 `daily`（有測試守住）。重複任務的完成紀錄存在 `recurringLog`（`{ [taskId]: { last, count } }`），不進 `completedTaskIds`。
@@ -133,6 +134,11 @@ src/models/onboarding.js
 src/models/stagePlanner.js
 src/models/advisor.js
 src/models/financialGuardrails.js
+src/models/evidence.js
+src/models/migrate.js
+src/models/momentum.js
+src/models/weeklyReview.js
+src/models/skillTree.js
 src/models/orgTree.js
 src/models/terminology.js
 src/styles/app.css
@@ -160,18 +166,22 @@ App shell 與跨區塊狀態：
 - `OnboardingWizard.jsx`：一次一題的引導問答＋每題「問 AI」＋計畫摘要。
 - `QuestTracker.jsx`：五階段地圖、過關條件勾選、progress bar、單一 micro-task。
 - `AdvisorPanel.jsx`：API key 管理＋目前階段的顧問對話。
-- `WeeklyReview.jsx`：每週回顧表單與生死線週配額對照。
+- `WeeklyReview.jsx`：每週回顧表單、毛利與離職進度、實績達成清單、顧問導航。
 - `AdvisorChat.jsx`：共用聊天元件（精靈與儀表板都用），含「加入」建議按鈕。
-- `FinancialPanel.jsx`：財務生死線輸入與判定。
+- `FinancialPanel.jsx`：事業支出／生活費／單價／單位成本四格輸入,依 `leadingLine` 決定放大字的是離職線還是生死線。
 - `OrgTreePreview.jsx`：Org-Tree 顯示、複製節點、解鎖管理節點。
 
 ### `src/models/financialGuardrails.js`
 
 核心財務邏輯：
 
-- `calculateSurvivalLine({ monthlyFixedCost, unitPrice, unitCost })`
+- `calculateSurvivalLine({ monthlyFixedCost, unitPrice, unitCost })`:純損益兩平原語,不管成本從哪來。
 - `calculateTargetLine({ ..., targetMonthlyIncome })`：目標收入所需單量。
+- `resolveFixedCosts({ businessFixedCost, livingCost, employment })`:決定哪些成本算進生死線（只有已離職者要把生活費算進去）。
+- `calculateMoneyLines({...})`:一次算出 `survivalUnits`／`replacementUnits`／`targetUnits`＋`leadingLine`（`survival`｜`replacement`｜`none`）。**UI 一律讀這個**,不要自己拼生死線,否則面板和週回顧會講出不同數字。
+- `describeWeeklyProgress({ units, lines })`:一週實際數字→毛利、月速度、事業是否已自給、離職進度百分比。刻意不回傳「還差幾個配額」。
 - `suggestAfterWorkPace({ weeklyHours, weeklyUnits })`
+- `WEEKS_PER_MONTH`（4.33）:所有週↔月換算共用,不要再各自寫 4.33。
 
 設計原則：只看單位經濟，不看產業。
 
@@ -179,7 +189,7 @@ App shell 與跨區塊狀態：
 
 引導問答流程：
 
-- `QUESTION_FLOW`：7 題（idea、employment、固定成本、單價、成本、週時數、目標收入）。
+- `QUESTION_FLOW`：8 題（idea、employment、**事業固定成本**、**個人生活費**、單價、成本、週時數、目標收入）。成本拆兩題是刻意的,合併回一題就會重蹈「在職者被算錯生死線」的覆轍。
 - `isAnswerValid(question, value)`、`createProfile(answers)`。
 
 ### `src/models/stagePlanner.js`
@@ -213,6 +223,14 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 - `buildDiagnosisPrompt({...reviews, weeklyNeed})`：每週導航診斷的提示詞。
 - `askAdvisor({...})`：真正的 API 呼叫；無 key 回傳寫死 mock。
 - `describeAdvisorError(err)`：把常見 API 錯誤翻成白話（餘額不足、401、429、5xx）。
+
+### `src/models/migrate.js`
+
+舊版 state 的就地遷移（全部資料在使用者瀏覽器裡,沒有後端 backfill,回訪使用者的 state 必須永遠能載入）:
+
+- `migrateCosts(source)`:舊的單一 `monthlyFixedCost` → `livingCost`（舊問法寫的是「房租、貸款」,本質是生活費）,`businessFixedCost` 補 0,並標記 `costsSplitPending` 讓面板跳一次確認提示。低估事業支出是安全的錯誤方向——寧可生死線樂觀,也不要無中生有一筆赤字。
+- `migrateState(state)`:對 `financial` 和 `profile` 都跑一次。冪等。
+- 在 `loadState` 裡呼叫,新增遷移就加在這裡,不要散在元件。
 
 ### `src/models/evidence.js`
 
@@ -263,10 +281,12 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
 ## 5. 測試狀態
 
-目前測試覆蓋（73/73 pass）：
+目前測試覆蓋（88/88 pass）：
 
 - 任務重複週期：每階段至少 1 個 daily、daily 隔天回來但當天不回來、weekly 撐完整個 ISO 週、取消勾選釋放任務、清空所有一次性任務後仍有事可做、「沒時間」與「沒任務」可分辨。
 - 實績驅動：0 單量不算數、賣出 1 個完成第一筆付款條件、四週合計達生死線才算損益平衡（週數不足或單量不足都不算）、虧損模型永遠不成立、回顧滾出視窗後已達成條件不倒退。
+- 成本拆分：在職者的生死線只含事業支出、離職者才含生活費、彈性工時仍算有薪水、目標線永遠 ≥ 離職線、負數輸入不會縮小門檻、小週次讀成進度百分比而非配額缺口、dossier 明確告訴顧問不要把生活費算進生死線。
+- 遷移：舊 `monthlyFixedCost` 落到生活費、冪等、髒資料不炸、profile 與 financial 都遷移、進度不遺失。
 
 - 財務生死線、虧錢模型拒絕、在職節奏風險判斷。
 - 引導問答：題目順序、答案驗證、profile 產生（含探索分支與 schema 檢查）。
@@ -330,15 +350,15 @@ npm test
 
 - [x] 任務重複週期（daily/weekly）＋空狀態分流:解掉「第一關 9 天就沒東西可做」。
 - [x] 實績驅動進度（`evidence.js`）:週回顧的真實數字自動完成過關條件。
+- [x] 成本拆成事業支出／個人生活費,在職者改用離職線,每週回顧改成進度而非配額缺口（含舊 state 就地遷移）。
 
 ### 下一步（來自 2026-08 產品體檢，按影響排序）
 
-這些是體檢出來、**還沒做**的問題。上面兩項已經處理掉最大的流失原因，剩下的照順序做：
+這些是體檢出來、**還沒做**的問題。上面三項（每天有事做、實績驅動進度、成本拆分）已經處理掉最大的流失原因，剩下的照順序做：
 
-1. **生死線對在職者算錯，而且每週指責使用者**。精靈第 3 題把「房租、貸款」等個人生活費算進 `monthlyFixedCost`，但在職者的房租是薪水付的。預設值算出每月 100 個、週配額 24 個，於是每週回顧永遠顯示「離週配額還差 N 個」——這是 app 核心賣點產出的第一個數字，既不正確也在打擊人。要拆成「事業固定成本」和「個人生活費」兩格；在職者的主數字應該是「這個月賺多少／離取代薪水還差多少」，不是週配額不足。
-2. **沒有 API key 的預設體驗等於靜態清單**。唯一會因人而異的部分（AI）鎖在 key 後面，而目標使用者多半不會去申請。
-3. **首頁重複**：`SkillTree` 和 `QuestTracker` 的階段地圖顯示幾乎同一份資訊；`OrgTreePreview` 的抽象節點（Operating Unit / Value Delivery）對「想賣出第一個便當」的人沒有意義。考慮砍掉或合併，首頁收斂成三塊：今天做什麼／這個月賺多少／下一關差什麼。
-4. **小瑕疵**：`suggestAfterWorkPace` 算出的 `recommendedWeeklyUnits` 從沒顯示過（只用到 >15 小時的過勞門檻）；`profile.weeklyHours` 除了餵給 AI 之外不影響任何規劃；Import JSON 沒有任何驗證就 spread 進 state。
+1. **沒有 API key 的預設體驗等於靜態清單**。唯一會因人而異的部分（AI）鎖在 key 後面，而目標使用者多半不會去申請。
+2. **首頁重複**：`SkillTree` 和 `QuestTracker` 的階段地圖顯示幾乎同一份資訊；`OrgTreePreview` 的抽象節點（Operating Unit / Value Delivery）對「想賣出第一個便當」的人沒有意義。考慮砍掉或合併，首頁收斂成三塊：今天做什麼／這個月賺多少／下一關差什麼。
+3. **小瑕疵**：`suggestAfterWorkPace` 算出的 `recommendedWeeklyUnits` 從沒顯示過（只用到 >15 小時的過勞門檻）；`profile.weeklyHours` 除了餵給 AI 之外不影響任何規劃；Import JSON 沒有任何驗證就 spread 進 state。
 
 ## 8. 核心商業原則
 

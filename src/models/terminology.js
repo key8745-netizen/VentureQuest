@@ -15,9 +15,17 @@ const COPY = {
     pro: '損益兩平單量（Break-even Volume）',
     plain: '生死線：每月至少要賣幾個才不會賠',
   },
-  monthlyFixedCost: {
-    pro: '每月固定成本',
-    plain: '就算一個都沒賣，每個月照樣要繳的錢',
+  replacementLine: {
+    pro: '薪資取代單量（Replacement Volume）',
+    plain: '離職線：每月賣幾個，事業就養得起你',
+  },
+  businessFixedCost: {
+    pro: '事業每月固定成本',
+    plain: '事業每個月固定要花的錢',
+  },
+  livingCost: {
+    pro: '個人每月生活費',
+    plain: '你自己每個月要花的生活費',
   },
   unitPrice: {
     pro: '單位售價',

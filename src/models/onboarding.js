@@ -23,10 +23,17 @@ export const QUESTION_FLOW = [
     ],
   },
   {
-    id: 'monthlyFixedCost',
+    id: 'businessFixedCost',
     type: 'number',
-    question: '就算一個都沒賣，每個月還是要繳多少錢？',
-    hint: '房租、訂閱、工具、貸款……先抓個大概就好。',
+    question: '這個事業本身，每個月固定要花多少錢？',
+    hint: '只算事業的：工具訂閱、網域、店面租金、固定月費。不含你的個人生活費。還沒花錢就填 0。',
+    unit: '元／月',
+  },
+  {
+    id: 'livingCost',
+    type: 'number',
+    question: '你個人每個月的生活費大概多少？',
+    hint: '房租、伙食、貸款。還在上班的話這筆由薪水付，我們用它算「什麼時候能安全離職」，不會算進生死線。',
     unit: '元／月',
   },
   {
@@ -73,7 +80,8 @@ export function isAnswerValid(question, value) {
 }
 
 const NUMBER_DEFAULTS = {
-  monthlyFixedCost: 0,
+  businessFixedCost: 0,
+  livingCost: 0,
   unitPrice: 0,
   unitCost: 0,
   weeklyHours: 5,

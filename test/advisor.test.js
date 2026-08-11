@@ -27,7 +27,8 @@ const profile = {
   idea: '便當店',
   exploring: false,
   employment: 'employed',
-  monthlyFixedCost: 30000,
+  businessFixedCost: 1200,
+  livingCost: 30000,
   unitPrice: 100,
   unitCost: 55,
   weeklyHours: 8,
@@ -107,7 +108,7 @@ test('stage prompt prefers live financial numbers and shows goal status', () => 
   const prompt = buildStagePrompt({
     profile,
     stage: richStage,
-    financial: { monthlyFixedCost: 35000, unitPrice: 150, unitCost: 60 },
+    financial: { businessFixedCost: 35000, livingCost: 0, unitPrice: 150, unitCost: 60 },
     completedGoalIds: ['g-done', 'sub-1'],
     breakdowns: { 'g-split': [{ id: 'sub-1', label: 'a' }, { id: 'sub-2', label: 'b' }] },
   });
@@ -128,7 +129,7 @@ test('goal prompt also uses live financial numbers when provided', () => {
     profile,
     stage,
     goal: { id: 'x', label: 'y' },
-    financial: { monthlyFixedCost: 99999, unitPrice: 150, unitCost: 60 },
+    financial: { businessFixedCost: 99999, livingCost: 0, unitPrice: 150, unitCost: 60 },
   });
   assert.ok(prompt.includes('99999'));
 });
@@ -284,7 +285,7 @@ test('diagnosis prompt navigates from actual weekly numbers back to the stage go
   const prompt = buildDiagnosisPrompt({
     profile,
     stage,
-    financial: { monthlyFixedCost: 30000, unitPrice: 100, unitCost: 55 },
+    financial: { businessFixedCost: 30000, livingCost: 0, unitPrice: 100, unitCost: 55 },
     completedGoalIds: ['explore-g1'],
     breakdowns: {},
     weeklyNeed: 154,
@@ -346,7 +347,7 @@ test('the dossier assembles the complete user state for the advisor', () => {
   };
   const dossier = buildDossier({
     profile,
-    financial: { monthlyFixedCost: 30000, unitPrice: 100, unitCost: 55 },
+    financial: { businessFixedCost: 30000, livingCost: 0, unitPrice: 100, unitCost: 55 },
     plan,
     completedGoalIds: ['g1'],
     breakdowns: {},
@@ -406,4 +407,38 @@ test('todayKey uses the local date, not UTC', () => {
     if (originalTZ === undefined) delete process.env.TZ;
     else process.env.TZ = originalTZ;
   }
+});
+
+test('the dossier tells the advisor whose salary is paying the rent', () => {
+  const plan = {
+    stages: [{ id: 's1', label: '探索驗證', goals: [{ id: 'g1', label: 'a' }] }],
+  };
+  const financial = {
+    businessFixedCost: 1200,
+    livingCost: 30000,
+    unitPrice: 500,
+    unitCost: 200,
+  };
+  const args = {
+    profile,
+    financial,
+    plan,
+    completedGoalIds: [],
+    breakdowns: {},
+    taskLog: {},
+    weeklyReviews: [],
+    today: '2026-08-11',
+  };
+
+  const employed = buildDossier(args);
+  assert.ok(employed.includes('每月 4 個'), 'survival covers business costs only');
+  assert.ok(employed.includes('每月 104 個'), 'replacement covers living costs');
+  assert.ok(
+    employed.includes('不要把生活費算進生死線'),
+    'the advisor must not repeat the mistake the split exists to fix',
+  );
+
+  const quit = buildDossier({ ...args, profile: { ...profile, employment: 'left' } });
+  assert.ok(quit.includes('已離開正職'));
+  assert.ok(quit.includes('生死線每月 104 個'), 'no salary left to cover living costs');
 });

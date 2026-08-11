@@ -19,6 +19,7 @@ import {
   REPEAT,
 } from './models/stagePlanner.js';
 import { accrueEvidence } from './models/evidence.js';
+import { migrateState } from './models/migrate.js';
 import {
   capHistory,
   todayKey,
@@ -38,7 +39,13 @@ function defaultState() {
   return {
     mode: modes.PLAIN,
     profile: null,
-    financial: { monthlyFixedCost: 30000, unitPrice: 500, unitCost: 200 },
+    // Two separate costs on purpose — see financialGuardrails.js.
+    financial: {
+      businessFixedCost: 0,
+      livingCost: 30000,
+      unitPrice: 500,
+      unitCost: 200,
+    },
     availableMinutes: 20,
     taskRotation: 0,
     taskLog: {},
@@ -83,10 +90,27 @@ function loadState() {
     if (parsed.profile === null || typeof parsed.profile === 'object') {
       merged.profile = parsed.profile ?? null;
     }
-    return merged;
+    return applyEvidence(migrateState(merged));
   } catch {
     return defaults;
   }
+}
+
+/**
+ * Reality check: fold anything the reported numbers now prove into the
+ * earned set. Applied on load as well as on every edit, so reviews
+ * logged before this feature existed still count.
+ */
+function applyEvidence(state) {
+  return {
+    ...state,
+    evidenceGoalIds: accrueEvidence({
+      earnedGoalIds: state.evidenceGoalIds,
+      reviews: state.weeklyReviews,
+      financial: state.financial,
+      employment: state.profile?.employment,
+    }),
+  };
 }
 
 /** Last line of defense: a render crash offers reset instead of a blank page. */
@@ -201,16 +225,7 @@ function App() {
     });
   };
 
-  // Reality check: fold anything the reported numbers now prove into
-  // the earned set. Runs wherever those numbers can change.
-  const withEvidence = (next) => ({
-    ...next,
-    evidenceGoalIds: accrueEvidence({
-      earnedGoalIds: next.evidenceGoalIds,
-      reviews: next.weeklyReviews,
-      financial: next.financial,
-    }),
-  });
+  const withEvidence = applyEvidence;
 
   // One persisted conversation per context (stage / goal / wizard
   // question), trimmed so localStorage stays small.
@@ -263,15 +278,19 @@ function App() {
   };
 
   const handleOnboardingComplete = (profile) => {
-    patch({
-      profile,
-      // Seed the financial panel with the wizard answers.
-      financial: {
-        monthlyFixedCost: profile.monthlyFixedCost,
-        unitPrice: profile.unitPrice,
-        unitCost: profile.unitCost,
-      },
-    });
+    setState((prev) =>
+      withEvidence({
+        ...prev,
+        profile,
+        // Seed the financial panel with the wizard answers.
+        financial: {
+          businessFixedCost: profile.businessFixedCost,
+          livingCost: profile.livingCost,
+          unitPrice: profile.unitPrice,
+          unitCost: profile.unitCost,
+        },
+      }),
+    );
     setEditingProfile(false);
   };
 
@@ -504,6 +523,7 @@ function App() {
             <FinancialPanel
               mode={state.mode}
               financial={state.financial}
+              employment={state.profile.employment}
               targetMonthlyIncome={state.profile.targetMonthlyIncome}
               onChange={(financial) =>
                 setState((prev) => withEvidence({ ...prev, financial }))
