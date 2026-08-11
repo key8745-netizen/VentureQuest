@@ -2,6 +2,22 @@
 // completed per day and derives the current streak. Un-checking a task
 // decrements the same day, so gaming the counter by toggling is moot.
 
+/**
+ * Local-date key (YYYY-MM-DD). Not toISOString(): that is UTC, which
+ * would put an early-morning task in Taipei (UTC+8) on yesterday's
+ * date — wrong streaks and a daily limit that resets at 08:00.
+ */
+export function localDayKey(date = new Date()) {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** The inverse of localDayKey: a day key back to a local-midnight Date. */
+export function parseDayKey(key) {
+  const [year, month, day] = String(key).split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 /** Adds delta to a day's completion count; counts never go negative. */
 export function bumpTaskLog(taskLog, date, delta) {
   const next = { ...taskLog };

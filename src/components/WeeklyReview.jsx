@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { getWeekLabel, upsertReview } from '../models/weeklyReview.js';
+import { deriveEvidence } from '../models/evidence.js';
 import {
   calculateSurvivalLine,
   suggestAfterWorkPace,
@@ -22,6 +23,7 @@ export default function WeeklyReview({
   financial,
   reviews,
   onReviewsChange,
+  evidenceGoalIds = [],
   profile,
   activeStage,
   completedGoalIds,
@@ -76,6 +78,11 @@ export default function WeeklyReview({
     .filter((review) => review.week !== week)
     .slice(-3)
     .reverse();
+  // The payoff for filling this form in honestly: numbers, not
+  // checkboxes, are what closed these goals.
+  const earned = deriveEvidence({ reviews, financial }).filter((item) =>
+    evidenceGoalIds.includes(item.goalId),
+  );
 
   return (
     <section className="card">
@@ -133,6 +140,20 @@ export default function WeeklyReview({
           {pace?.risk === 'burnout-risk' && (
             <p>這週投入偏多，小心過勞——可持續比衝刺重要。</p>
           )}
+        </div>
+      )}
+
+      {earned.length > 0 && (
+        <div className="verdict verdict-evidence">
+          <p>{getCopy('evidenceUnlocked', mode)}</p>
+          <ul>
+            {earned.map((item) => (
+              <li key={item.goalId}>
+                <strong>{item.label}</strong>
+                <span className="muted"> — {item.reason}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

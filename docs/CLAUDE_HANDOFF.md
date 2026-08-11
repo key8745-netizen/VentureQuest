@@ -21,6 +21,9 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 - 財務生死線：每月固定成本、單位售價、單位變動成本、最低單量；另顯示目標線（要賺到目標月收入每月要賣幾個）。
 - 每週回顧＋顧問導航：每 ISO 週記一筆實際投入時數／賣出單位／心得（`weeklyReviews`，同週覆寫、最多留 12 週），對照生死線週配額並提示過勞風險。記完後可一鍵請顧問「診斷」：`buildDiagnosisPrompt` 餵入階段條件狀態＋最近 4 週實際數字＋週配額，指示顧問耐心、不責備、從現在位置設計走回階段目標的最短路徑，並可建議修正用的任務／條件（可採用）。這是「AI 依實際達成狀況規劃走向」的閉環。
 - 今日 micro-task：依照今天可用分鐘數，只顯示一個可以做的小任務；「換一個」可輪替到下一個合適任務（`taskRotation`，持久化），並顯示本階段任務完成度。完成任務會記進 `taskLog`（每日計數），顯示 🔥 連續天數（今天還沒做時以昨天為止計算，取消勾選會扣回）。
+- 任務重複週期（`task.repeat`：`once`／`daily`／`weekly`）：一次性任務是設定工作（寫下固定成本），做完就退場；`daily`／`weekly` 是引擎（開口報價、約訪談、看數字），隔天或下週自動回到清單。**這是 app 能不能被長期使用的關鍵**——每階段的過關條件要幾週到幾個月，但一次性任務只有 5–9 個，沒有重複任務的話第一關 9 天就空了，使用者打開只會看到空狀態然後流失。改 `STAGE_TEMPLATES` 時每個階段至少要留 1 個 `daily`（有測試守住）。重複任務的完成紀錄存在 `recurringLog`（`{ [taskId]: { last, count } }`），不進 `completedTaskIds`。
+- 空狀態分流：「有任務但塞不進今天分鐘數」和「今天的份做完了」是兩件事，文案不同（`noTaskFitsToday` / `allTasksDoneToday`）。以前兩者都顯示「今天時間太少」，任務用完的人被誤導成調時間，是實際的流失原因，不要合併回去。
+- 實績驅動進度（`evidence.js`）：每週回顧的真實數字自動完成對應過關條件（賣出 ≥1 個 → `explore-g4`；最近 4 週合計 ≥ 生死線月單量 → `operate-g3`）。這是全 app 唯一不能自己打勾的進度來源——其他所有完成度都是使用者自評，連續天數和進度條可以在營收 0 元的情況下漂亮地跑。已達成的條件存進 `evidenceGoalIds` 永久保留（單向棘輪：回顧只留 12 週，第一筆付款那週滾出視窗後不能倒退），UI 標示「實績達成」且 checkbox 唯讀。
 - 產業無感 schema：底層只用 `productId`、單位經濟、抽象 operating nodes；使用者的產業只存在 `profile.idea` 這個字串。
 - 最小 Org-Tree：可複製節點、解鎖管理節點；卡片依目前階段顯示提示（第 5 關「規模擴張」時提示在此開第二據點）。
 
@@ -183,7 +186,11 @@ App shell 與跨區塊狀態：
 
 五階段路線圖與進度：
 
-- `buildStagePlan({ profile, customizations })`：五階段（explore/prepare/operate/grow/scale），每階段 goals（過關條件）＋ tasks（5–30 分鐘）。
+- `buildStagePlan({ profile, customizations })`：五階段（explore/prepare/operate/grow/scale），每階段 goals（過關條件）＋ tasks（5–30 分鐘，帶 `repeat` 週期）。
+- `REPEAT`：`once` / `daily` / `weekly`。
+- `isTaskChecked({ task, completedTaskIds, recurringLog, today })`：依週期讀正確來源。
+- `getAvailableTasks({...})`：本階段還能做的（不看分鐘數）；`getTodayMicroTasks` 是它再過濾分鐘數。兩者分開才能分辨兩種空狀態。
+- `recordRecurringTask(recurringLog, taskId, today, done)`：記錄／取消今天（本週）做過。
 - `isGoalComplete({ goalId, completedGoalIds, breakdowns })`：遞迴判斷,有子項目的目標由子項目決定。
 - `removeBreakdownItem(breakdowns, itemId)`：移除項目與其整個子樹;父項目清空後恢復可直接勾選。
 - `getUncelebratedStage({ plan, completedGoalIds, breakdowns, celebratedStageIds })`：驅動一次性過關彈窗。
@@ -207,10 +214,19 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 - `askAdvisor({...})`：真正的 API 呼叫；無 key 回傳寫死 mock。
 - `describeAdvisorError(err)`：把常見 API 錯誤翻成白話（餘額不足、401、429、5xx）。
 
+### `src/models/evidence.js`
+
+實績驅動進度（唯一不能自評的進度來源）:
+
+- `deriveEvidence({ reviews, financial })`:回傳 `[{ goalId, label, reason }]`,reason 是給使用者看的理由（哪一週、賣了幾個）。
+- `accrueEvidence({ earnedGoalIds, reviews, financial })`:單向 union,沒有新東西時回傳同一個陣列（呼叫端可省下 state 寫入）。
+- 加新規則時要保守:「賣出單位數」不等於「不重複付費客戶數」,不要用單量去證明客戶數類的條件。
+
 ### `src/models/momentum.js`
 
 每日習慣動力:
 
+- `localDayKey(date)` / `parseDayKey(key)`:本地日期字串互轉（`advisor.todayKey` 也委派到這裡,不要再各自實作一份 UTC 版）。
 - `bumpTaskLog(taskLog, date, delta)`:每日完成計數,不會為負。
 - `computeStreak(taskLog, today)`:連續天數(今天沒做以昨天為終點)。
 
@@ -247,7 +263,10 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
 ## 5. 測試狀態
 
-目前測試覆蓋（53/53 pass）：
+目前測試覆蓋（73/73 pass）：
+
+- 任務重複週期：每階段至少 1 個 daily、daily 隔天回來但當天不回來、weekly 撐完整個 ISO 週、取消勾選釋放任務、清空所有一次性任務後仍有事可做、「沒時間」與「沒任務」可分辨。
+- 實績驅動：0 單量不算數、賣出 1 個完成第一筆付款條件、四週合計達生死線才算損益平衡（週數不足或單量不足都不算）、虧損模型永遠不成立、回顧滾出視窗後已達成條件不倒退。
 
 - 財務生死線、虧錢模型拒絕、在職節奏風險判斷。
 - 引導問答：題目順序、答案驗證、profile 產生（含探索分支與 schema 檢查）。
@@ -309,9 +328,17 @@ npm test
 - [x] 使用者完整狀態檔（dossier）餵入顧問＋透明檢視。
 - [x] 審計修正:每日日界線改用本地時間（時區 bug）、每週回顧跨週自動重設輸入框、Gemini 模型 ID 對官方文件驗證。
 
-### P2
+- [x] 任務重複週期（daily/weekly）＋空狀態分流:解掉「第一關 9 天就沒東西可做」。
+- [x] 實績驅動進度（`evidence.js`）:週回顧的真實數字自動完成過關條件。
 
-（已全部完成,見上方「已完成」。）
+### 下一步（來自 2026-08 產品體檢，按影響排序）
+
+這些是體檢出來、**還沒做**的問題。上面兩項已經處理掉最大的流失原因，剩下的照順序做：
+
+1. **生死線對在職者算錯，而且每週指責使用者**。精靈第 3 題把「房租、貸款」等個人生活費算進 `monthlyFixedCost`，但在職者的房租是薪水付的。預設值算出每月 100 個、週配額 24 個，於是每週回顧永遠顯示「離週配額還差 N 個」——這是 app 核心賣點產出的第一個數字，既不正確也在打擊人。要拆成「事業固定成本」和「個人生活費」兩格；在職者的主數字應該是「這個月賺多少／離取代薪水還差多少」，不是週配額不足。
+2. **沒有 API key 的預設體驗等於靜態清單**。唯一會因人而異的部分（AI）鎖在 key 後面，而目標使用者多半不會去申請。
+3. **首頁重複**：`SkillTree` 和 `QuestTracker` 的階段地圖顯示幾乎同一份資訊；`OrgTreePreview` 的抽象節點（Operating Unit / Value Delivery）對「想賣出第一個便當」的人沒有意義。考慮砍掉或合併，首頁收斂成三塊：今天做什麼／這個月賺多少／下一關差什麼。
+4. **小瑕疵**：`suggestAfterWorkPace` 算出的 `recommendedWeeklyUnits` 從沒顯示過（只用到 >15 小時的過勞門檻）；`profile.weeklyHours` 除了餵給 AI 之外不影響任何規劃；Import JSON 沒有任何驗證就 spread 進 state。
 
 ## 8. 核心商業原則
 

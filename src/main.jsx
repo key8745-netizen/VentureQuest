@@ -14,7 +14,11 @@ import {
   getActiveStage,
   getUncelebratedStage,
   removeBreakdownItem,
+  recordRecurringTask,
+  isTaskChecked,
+  REPEAT,
 } from './models/stagePlanner.js';
+import { accrueEvidence } from './models/evidence.js';
 import {
   capHistory,
   todayKey,
@@ -40,6 +44,11 @@ function defaultState() {
     taskLog: {},
     completedGoalIds: [],
     completedTaskIds: [],
+    // Repeating tasks: { [taskId]: { last: 'YYYY-MM-DD', count } }.
+    recurringLog: {},
+    // Goals proven by the user's reported numbers rather than ticked by
+    // hand. Persisted because evidence must not expire with history.
+    evidenceGoalIds: [],
     customizations: {},
     breakdowns: {},
     celebratedStageIds: [],
@@ -158,17 +167,50 @@ function App() {
   };
 
   // Toggling today's task also bumps the per-day completion log that
-  // feeds the streak counter.
-  const handleToggleTask = (taskId) => {
+  // feeds the streak counter. One-shot tasks retire into
+  // completedTaskIds; repeating ones only record when they were last
+  // done, so they come back next day or next week.
+  const handleToggleTask = (task) => {
     setState((prev) => {
-      const wasChecked = prev.completedTaskIds.includes(taskId);
+      const today = todayKey();
+      const wasChecked = isTaskChecked({
+        task,
+        completedTaskIds: prev.completedTaskIds,
+        recurringLog: prev.recurringLog,
+        today,
+      });
+      const taskLog = bumpTaskLog(prev.taskLog, today, wasChecked ? -1 : 1);
+
+      if (!task.repeat || task.repeat === REPEAT.ONCE) {
+        return {
+          ...prev,
+          completedTaskIds: toggleId(prev.completedTaskIds, task.id),
+          taskLog,
+        };
+      }
       return {
         ...prev,
-        completedTaskIds: toggleId(prev.completedTaskIds, taskId),
-        taskLog: bumpTaskLog(prev.taskLog, todayKey(), wasChecked ? -1 : 1),
+        recurringLog: recordRecurringTask(
+          prev.recurringLog,
+          task.id,
+          today,
+          !wasChecked,
+        ),
+        taskLog,
       };
     });
   };
+
+  // Reality check: fold anything the reported numbers now prove into
+  // the earned set. Runs wherever those numbers can change.
+  const withEvidence = (next) => ({
+    ...next,
+    evidenceGoalIds: accrueEvidence({
+      earnedGoalIds: next.evidenceGoalIds,
+      reviews: next.weeklyReviews,
+      financial: next.financial,
+    }),
+  });
 
   // One persisted conversation per context (stage / goal / wizard
   // question), trimmed so localStorage stays small.
@@ -273,17 +315,25 @@ function App() {
         customizations: state.customizations,
       })
     : null;
+  // What counts as done: what the user ticked, plus what their reported
+  // numbers proved. Everything downstream reads this; only the raw
+  // state.completedGoalIds is ever written back, so evidence never
+  // leaks into the hand-ticked list.
+  const provenGoalIds = [
+    ...state.completedGoalIds,
+    ...state.evidenceGoalIds.filter((id) => !state.completedGoalIds.includes(id)),
+  ];
   const activeStage = plan
     ? getActiveStage({
         plan,
-        completedGoalIds: state.completedGoalIds,
+        completedGoalIds: provenGoalIds,
         breakdowns: state.breakdowns,
       })
     : null;
   const clearedStage = plan
     ? getUncelebratedStage({
         plan,
-        completedGoalIds: state.completedGoalIds,
+        completedGoalIds: provenGoalIds,
         breakdowns: state.breakdowns,
         celebratedStageIds: state.celebratedStageIds,
       })
@@ -293,7 +343,7 @@ function App() {
         profile: state.profile,
         financial: state.financial,
         plan,
-        completedGoalIds: state.completedGoalIds,
+        completedGoalIds: provenGoalIds,
         breakdowns: state.breakdowns,
         taskLog: state.taskLog,
         weeklyReviews: state.weeklyReviews,
@@ -383,12 +433,19 @@ function App() {
               breakdowns={state.breakdowns}
               availableMinutes={state.availableMinutes}
               taskRotation={state.taskRotation}
-              completedGoalIds={state.completedGoalIds}
+              completedGoalIds={provenGoalIds}
+              evidenceGoalIds={state.evidenceGoalIds}
               completedTaskIds={state.completedTaskIds}
+              recurringLog={state.recurringLog}
               taskLog={state.taskLog}
               onAvailableMinutesChange={(availableMinutes) => patch({ availableMinutes })}
               onTaskRotationChange={(taskRotation) => patch({ taskRotation })}
-              onCompletedGoalIdsChange={(completedGoalIds) => patch({ completedGoalIds })}
+              onToggleGoal={(goalId) =>
+                setState((prev) => ({
+                  ...prev,
+                  completedGoalIds: toggleId(prev.completedGoalIds, goalId),
+                }))
+              }
               onToggleTask={handleToggleTask}
               onAddBreakdown={addBreakdownItems}
               onRemoveItem={handleRemoveItem}
@@ -403,7 +460,7 @@ function App() {
             <SkillTree
               mode={state.mode}
               plan={plan}
-              completedGoalIds={state.completedGoalIds}
+              completedGoalIds={provenGoalIds}
               breakdowns={state.breakdowns}
             />
             <AdvisorPanel
@@ -413,7 +470,7 @@ function App() {
               onApiKeyChange={setApiKey}
               profile={state.profile}
               financial={state.financial}
-              completedGoalIds={state.completedGoalIds}
+              completedGoalIds={provenGoalIds}
               breakdowns={state.breakdowns}
               activeStage={activeStage}
               usage={state.advisorUsage}
@@ -427,10 +484,13 @@ function App() {
               mode={state.mode}
               financial={state.financial}
               reviews={state.weeklyReviews}
-              onReviewsChange={(weeklyReviews) => patch({ weeklyReviews })}
+              onReviewsChange={(weeklyReviews) =>
+                setState((prev) => withEvidence({ ...prev, weeklyReviews }))
+              }
+              evidenceGoalIds={state.evidenceGoalIds}
               profile={state.profile}
               activeStage={activeStage}
-              completedGoalIds={state.completedGoalIds}
+              completedGoalIds={provenGoalIds}
               breakdowns={state.breakdowns}
               apiKey={apiKey}
               usage={state.advisorUsage}
@@ -445,7 +505,9 @@ function App() {
               mode={state.mode}
               financial={state.financial}
               targetMonthlyIncome={state.profile.targetMonthlyIncome}
-              onChange={(financial) => patch({ financial })}
+              onChange={(financial) =>
+                setState((prev) => withEvidence({ ...prev, financial }))
+              }
             />
             <OrgTreePreview
               mode={state.mode}

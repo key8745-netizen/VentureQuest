@@ -11,6 +11,10 @@ import {
   toggleId,
   calculatePlanProgress,
   isGoalComplete,
+  REPEAT,
+  getAvailableTasks,
+  isTaskChecked,
+  recordRecurringTask,
 } from '../src/models/stagePlanner.js';
 
 const profile = {
@@ -321,4 +325,152 @@ test('a user who already quit gets runway framing instead of quit-prep', () => {
   // Employed users keep the original copy.
   const employed = buildStagePlan({ profile });
   assert.ok(employed.stages[1].subtitle.includes('離開正職'));
+});
+
+test('every stage has a repeating task so the daily loop never empties', () => {
+  const plan = buildStagePlan({ profile });
+
+  for (const stage of plan.stages) {
+    const repeating = stage.tasks.filter(
+      (task) => task.repeat === REPEAT.DAILY || task.repeat === REPEAT.WEEKLY,
+    );
+    assert.ok(
+      repeating.some((task) => task.repeat === REPEAT.DAILY),
+      `${stage.id} needs at least one daily task — stage exit goals take months`,
+    );
+  }
+});
+
+test('a daily task comes back tomorrow but not the same day', () => {
+  const plan = buildStagePlan({ profile });
+  const daily = plan.stages[0].tasks.find((task) => task.repeat === REPEAT.DAILY);
+
+  const log = recordRecurringTask({}, daily.id, '2026-08-11', true);
+
+  const sameDay = getAvailableTasks({
+    plan,
+    completedGoalIds: [],
+    recurringLog: log,
+    today: '2026-08-11',
+  });
+  assert.ok(!sameDay.some((task) => task.id === daily.id));
+
+  const nextDay = getAvailableTasks({
+    plan,
+    completedGoalIds: [],
+    recurringLog: log,
+    today: '2026-08-12',
+  });
+  assert.ok(nextDay.some((task) => task.id === daily.id));
+});
+
+test('a weekly task stays done for the rest of its ISO week', () => {
+  const plan = buildStagePlan({ profile });
+  const weekly = plan.stages[0].tasks.find((task) => task.repeat === REPEAT.WEEKLY);
+
+  // 2026-08-11 is a Tuesday; 08-14 is the Friday of the same ISO week.
+  const log = recordRecurringTask({}, weekly.id, '2026-08-11', true);
+
+  const sameWeek = getAvailableTasks({
+    plan,
+    completedGoalIds: [],
+    recurringLog: log,
+    today: '2026-08-14',
+  });
+  assert.ok(!sameWeek.some((task) => task.id === weekly.id));
+
+  const nextWeek = getAvailableTasks({
+    plan,
+    completedGoalIds: [],
+    recurringLog: log,
+    today: '2026-08-18',
+  });
+  assert.ok(nextWeek.some((task) => task.id === weekly.id));
+});
+
+test('un-checking a repeating task makes it available again', () => {
+  const done = recordRecurringTask({}, 'explore-9', '2026-08-11', true);
+  assert.equal(done['explore-9'].count, 1);
+
+  const undone = recordRecurringTask(done, 'explore-9', '2026-08-11', false);
+  assert.equal(undone['explore-9'], undefined);
+
+  const twice = recordRecurringTask(
+    recordRecurringTask({}, 'explore-9', '2026-08-10', true),
+    'explore-9',
+    '2026-08-11',
+    true,
+  );
+  assert.equal(twice['explore-9'].count, 2);
+  // Undoing today keeps the historical count but frees the task.
+  const rolledBack = recordRecurringTask(twice, 'explore-9', '2026-08-11', false);
+  assert.equal(rolledBack['explore-9'].count, 1);
+  assert.equal(rolledBack['explore-9'].last, null);
+});
+
+test('the stage still has work left after every one-shot task is done', () => {
+  const plan = buildStagePlan({ profile });
+  const stage = plan.stages[0];
+  const completedTaskIds = stage.tasks
+    .filter((task) => !task.repeat || task.repeat === REPEAT.ONCE)
+    .map((task) => task.id);
+
+  const available = getAvailableTasks({
+    plan,
+    completedGoalIds: [],
+    completedTaskIds,
+    today: '2026-08-11',
+  });
+
+  assert.ok(
+    available.length > 0,
+    'clearing the setup checklist must not leave the user with an empty app',
+  );
+});
+
+test('running out of time is not the same as running out of tasks', () => {
+  const plan = buildStagePlan({ profile });
+
+  const available = getAvailableTasks({
+    plan,
+    completedGoalIds: [],
+    today: '2026-08-11',
+  });
+  const fitting = getTodayMicroTasks({
+    plan,
+    completedGoalIds: [],
+    availableMinutes: 1,
+    today: '2026-08-11',
+  });
+
+  assert.ok(available.length > 0);
+  assert.equal(fitting.length, 0);
+});
+
+test('isTaskChecked reads the right source per cadence', () => {
+  const once = { id: 'explore-1', minutes: 10 };
+  const daily = { id: 'explore-9', minutes: 15, repeat: REPEAT.DAILY };
+
+  assert.equal(
+    isTaskChecked({ task: once, completedTaskIds: ['explore-1'], today: '2026-08-11' }),
+    true,
+  );
+  assert.equal(
+    isTaskChecked({
+      task: daily,
+      completedTaskIds: ['explore-9'],
+      recurringLog: {},
+      today: '2026-08-11',
+    }),
+    false,
+    'a stale one-shot entry must not permanently retire a daily task',
+  );
+  assert.equal(
+    isTaskChecked({
+      task: daily,
+      recurringLog: { 'explore-9': { last: '2026-08-11', count: 1 } },
+      today: '2026-08-11',
+    }),
+    true,
+  );
 });

@@ -3,10 +3,12 @@ import {
   buildStagePlan,
   getActiveStage,
   getTodayMicroTasks,
+  getAvailableTasks,
+  isTaskChecked,
   pickRotatingTask,
-  toggleId,
   calculatePlanProgress,
   isGoalComplete,
+  REPEAT,
 } from '../models/stagePlanner.js';
 import { getCopy } from '../models/terminology.js';
 import AdvisorChat from './AdvisorChat.jsx';
@@ -31,6 +33,7 @@ function GoalItem({
   financial,
   breakdowns,
   completedGoalIds,
+  evidenceGoalIds,
   openChatId,
   onOpenChat,
   onToggle,
@@ -48,6 +51,8 @@ function GoalItem({
   const hasChildren = children.length > 0;
   const complete = isGoalComplete({ goalId: goal.id, completedGoalIds, breakdowns });
   const chatOpen = openChatId === goal.id;
+  // Proven by the user's own reported numbers — not theirs to untick.
+  const byEvidence = evidenceGoalIds.includes(goal.id);
   // Only AI-added items are removable: breakdown sub-items (depth > 0)
   // and adopted custom goals. Built-in stage goals stay.
   const isBreakdownItem = pathLabels.length > 0;
@@ -71,10 +76,13 @@ function GoalItem({
           <input
             type="checkbox"
             checked={complete}
-            disabled={hasChildren}
+            disabled={hasChildren || byEvidence}
             onChange={() => onToggle(goal.id)}
           />
-          <span>{goal.label}</span>
+          <span>
+            {goal.label}
+            {byEvidence && <em className="evidence-badge">實績達成</em>}
+          </span>
         </label>
         <span className="goal-actions">
           <button
@@ -127,6 +135,7 @@ function GoalItem({
               financial={financial}
               breakdowns={breakdowns}
               completedGoalIds={completedGoalIds}
+              evidenceGoalIds={evidenceGoalIds}
               openChatId={openChatId}
               onOpenChat={onOpenChat}
               onToggle={onToggle}
@@ -156,11 +165,13 @@ export default function QuestTracker({
   availableMinutes,
   taskRotation,
   completedGoalIds,
+  evidenceGoalIds = [],
   completedTaskIds,
+  recurringLog = {},
   taskLog,
   onAvailableMinutesChange,
   onTaskRotationChange,
-  onCompletedGoalIdsChange,
+  onToggleGoal,
   onToggleTask,
   onAddBreakdown,
   onRemoveItem,
@@ -174,23 +185,36 @@ export default function QuestTracker({
 }) {
   const [openChatId, setOpenChatId] = useState(null);
 
+  const today = todayKey();
   const plan = buildStagePlan({ profile, customizations });
   const progress = calculatePlanProgress({ plan, completedGoalIds, breakdowns });
   const activeStage = getActiveStage({ plan, completedGoalIds, breakdowns });
+  const taskState = { completedTaskIds, recurringLog, today };
+  // Split deliberately: "nothing fits your minutes today" and "nothing
+  // is left in this stage" need different answers, and conflating them
+  // used to tell users their time was too short when in fact they had
+  // simply finished every one-shot task in the stage.
+  const availableTasks = getAvailableTasks({
+    plan,
+    completedGoalIds,
+    breakdowns,
+    ...taskState,
+  });
   const todayTasks = getTodayMicroTasks({
     plan,
     completedGoalIds,
-    completedTaskIds,
     availableMinutes,
     breakdowns,
+    ...taskState,
   });
   // One small win per day beats a backlog: show a single task, but
   // let the user rotate when today's pick doesn't fit today.
   const todayTask = pickRotatingTask(todayTasks, taskRotation);
   const stageDoneCount = activeStage
-    ? activeStage.tasks.filter((task) => completedTaskIds.includes(task.id)).length
+    ? activeStage.tasks.filter((task) => isTaskChecked({ task, ...taskState })).length
     : 0;
-  const { streak, doneToday } = computeStreak(taskLog ?? {}, todayKey());
+  const { streak, doneToday } = computeStreak(taskLog ?? {}, today);
+  const repeatCount = todayTask ? (recurringLog[todayTask.id]?.count ?? 0) : 0;
 
   return (
     <section className="card">
@@ -230,12 +254,15 @@ export default function QuestTracker({
           <label className="micro-task">
             <input
               type="checkbox"
-              checked={completedTaskIds.includes(todayTask.id)}
-              onChange={() => onToggleTask(todayTask.id)}
+              checked={isTaskChecked({ task: todayTask, ...taskState })}
+              onChange={() => onToggleTask(todayTask)}
             />
             <span>
               {todayTask.label}
               <em>（約 {todayTask.minutes} 分鐘）</em>
+              {todayTask.repeat === REPEAT.DAILY && <em className="repeat-tag">每天</em>}
+              {todayTask.repeat === REPEAT.WEEKLY && <em className="repeat-tag">每週</em>}
+              {repeatCount > 0 && <em className="repeat-count">已做過 {repeatCount} 次</em>}
             </span>
           </label>
           <p className="task-meta muted">
@@ -254,7 +281,11 @@ export default function QuestTracker({
         </>
       ) : (
         <p className="muted">
-          {activeStage ? getCopy('noTaskFitsToday', mode) : '所有階段都完成了。'}
+          {!activeStage
+            ? '所有階段都完成了。'
+            : availableTasks.length > 0
+              ? getCopy('noTaskFitsToday', mode)
+              : getCopy('allTasksDoneToday', mode)}
         </p>
       )}
 
@@ -290,11 +321,10 @@ export default function QuestTracker({
                       financial={financial}
                       breakdowns={breakdowns}
                       completedGoalIds={completedGoalIds}
+                      evidenceGoalIds={evidenceGoalIds}
                       openChatId={openChatId}
                       onOpenChat={setOpenChatId}
-                      onToggle={(goalId) =>
-                        onCompletedGoalIdsChange(toggleId(completedGoalIds, goalId))
-                      }
+                      onToggle={onToggleGoal}
                       onAddBreakdown={onAddBreakdown}
                       onRemoveItem={onRemoveItem}
                       onAdoptTask={onAdoptTask}

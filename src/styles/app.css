@@ -144,6 +144,42 @@ button.mini {
   color: var(--danger);
 }
 
+.verdict-evidence {
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+}
+
+.verdict-evidence ul {
+  margin: 6px 0 0;
+  padding-left: 20px;
+}
+
+/* Cadence and evidence markers: small, inline, never louder than the
+   task or goal they annotate. */
+.repeat-tag,
+.repeat-count,
+.evidence-badge {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-style: normal;
+  font-size: 0.72rem;
+  vertical-align: middle;
+}
+
+.repeat-tag {
+  background: var(--accent);
+  color: #fff;
+}
+
+.repeat-count,
+.evidence-badge {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
 .big-number strong {
   font-size: 1.5rem;
 }
@@ -459,6 +495,11 @@ button.mini {
   font-style: normal;
   font-size: 0.8rem;
   color: var(--muted);
+}
+
+.micro-task em.repeat-tag,
+.micro-task em.repeat-count {
+  display: inline-block;
 }
 
 .streak {

@@ -5,6 +5,22 @@
 //
 // Schema stays domain-agnostic: goals and tasks carry only generic
 // labels; the user's own idea lives in profile.idea, never in keys.
+//
+// Tasks carry a repeat cadence. 'once' tasks are setup work that is
+// genuinely finished after doing it (write down your fixed costs);
+// 'daily' / 'weekly' tasks are the engine — the actions that actually
+// move a venture forward are repetition, not a checklist. Without
+// them a stage runs out of content in days while its exit goals still
+// take months, and the app has nothing to say.
+
+import { localDayKey, parseDayKey } from './momentum.js';
+import { getWeekLabel } from './weeklyReview.js';
+
+export const REPEAT = {
+  ONCE: 'once',
+  DAILY: 'daily',
+  WEEKLY: 'weekly',
+};
 
 const STAGE_TEMPLATES = [
   {
@@ -23,10 +39,11 @@ const STAGE_TEMPLATES = [
       { id: 'explore-3', label: '訂出單位售價和變動成本，算一次生死線', minutes: 15 },
       { id: 'explore-4', label: '列出 5 個最可能付錢的第一批客戶', minutes: 15 },
       { id: 'explore-5', label: '寫下訪談要問的 3 個問題', minutes: 10 },
-      { id: 'explore-6', label: '傳訊息約 1 位潛在客戶聊 15 分鐘', minutes: 10 },
-      { id: 'explore-7', label: '完成 1 場訪談，記下對方願不願意付錢', minutes: 30 },
+      { id: 'explore-6', label: '傳訊息約 1 位潛在客戶聊 15 分鐘', minutes: 10, repeat: REPEAT.DAILY },
+      { id: 'explore-7', label: '完成 1 場訪談，記下對方願不願意付錢', minutes: 30, repeat: REPEAT.WEEKLY },
       { id: 'explore-8', label: '做一頁最陽春的報價或服務說明', minutes: 30 },
-      { id: 'explore-9', label: '向 1 個人開口報價', minutes: 15 },
+      { id: 'explore-9', label: '向 1 個人開口報價', minutes: 15, repeat: REPEAT.DAILY },
+      { id: 'explore-10', label: '記下今天聽到的 1 句客戶原話，對照你想賣的東西', minutes: 5, repeat: REPEAT.DAILY },
     ],
   },
   {
@@ -41,13 +58,14 @@ const STAGE_TEMPLATES = [
     ],
     tasks: [
       { id: 'prepare-1', label: '算出你的安全離職數字：月生活費 × 12', minutes: 10 },
-      { id: 'prepare-2', label: '記錄本月副業收入，和正職的 30% 比一比', minutes: 10 },
+      { id: 'prepare-2', label: '記錄本月副業收入，和正職的 30% 比一比', minutes: 10, repeat: REPEAT.WEEKLY },
       { id: 'prepare-3', label: '盤點目前客戶都是從哪裡來的', minutes: 15 },
       { id: 'prepare-4', label: '挑一個客源管道，訂下每週固定要做的一件事', minutes: 15 },
       { id: 'prepare-5', label: '查你的業種需要什麼登記或執照', minutes: 30 },
       { id: 'prepare-6', label: '寫下離職條件清單：數字到了才走', minutes: 15 },
       { id: 'prepare-7', label: '開一張副業專用的收支記錄表', minutes: 10 },
-      { id: 'prepare-8', label: '傳訊息關心 1 位舊客戶，看會不會回購', minutes: 10 },
+      { id: 'prepare-8', label: '傳訊息關心 1 位舊客戶，看會不會回購', minutes: 10, repeat: REPEAT.WEEKLY },
+      { id: 'prepare-9', label: '照你選的客源管道，做今天該做的那一件事', minutes: 15, repeat: REPEAT.DAILY },
     ],
   },
   {
@@ -64,9 +82,10 @@ const STAGE_TEMPLATES = [
       { id: 'operate-1', label: '把交付一次服務的步驟寫成 5 步以內清單', minutes: 20 },
       { id: 'operate-2', label: '挑一步，寫成別人照做也能完成的說明', minutes: 20 },
       { id: 'operate-3', label: '建一張簡單的月損益表：收入、成本、剩下', minutes: 20 },
-      { id: 'operate-4', label: '跟 1 位滿意的客戶要一段書面評價', minutes: 10 },
-      { id: 'operate-5', label: '檢查本月單量有沒有超過生死線', minutes: 10 },
+      { id: 'operate-4', label: '跟 1 位滿意的客戶要一段書面評價', minutes: 10, repeat: REPEAT.WEEKLY },
+      { id: 'operate-5', label: '檢查本月單量有沒有超過生死線', minutes: 10, repeat: REPEAT.WEEKLY },
       { id: 'operate-6', label: '比較 3 個同業的定價，決定要不要調整', minutes: 20 },
+      { id: 'operate-7', label: '交付完今天的單，記下 1 個可以更省時的地方', minutes: 10, repeat: REPEAT.DAILY },
     ],
   },
   {
@@ -83,9 +102,10 @@ const STAGE_TEMPLATES = [
       { id: 'grow-1', label: '列出你每週重複做的 3 件事', minutes: 10 },
       { id: 'grow-2', label: '挑 1 件，寫成可以交給別人的說明', minutes: 20 },
       { id: 'grow-3', label: '找 1 個可能的助理或外包人選並開口', minutes: 15 },
-      { id: 'grow-4', label: '設計一句轉介話術，傳給 3 位老客戶', minutes: 15 },
-      { id: 'grow-5', label: '訂下每週 30 分鐘的看數字儀式時間', minutes: 5 },
+      { id: 'grow-4', label: '設計一句轉介話術，傳給 3 位老客戶', minutes: 15, repeat: REPEAT.WEEKLY },
+      { id: 'grow-5', label: '花 30 分鐘看這週的數字：收入、單量、時間', minutes: 30, repeat: REPEAT.WEEKLY },
       { id: 'grow-6', label: '寫下這個月最想丟掉的 1 件雜事', minutes: 5 },
+      { id: 'grow-7', label: '今天挑 1 件雜事，交出去或直接不做', minutes: 10, repeat: REPEAT.DAILY },
     ],
   },
   {
@@ -100,9 +120,10 @@ const STAGE_TEMPLATES = [
     tasks: [
       { id: 'scale-1', label: '寫下第二個營運單位會長什麼樣子', minutes: 15 },
       { id: 'scale-2', label: '列出你不在的時候，誰負責什麼', minutes: 20 },
-      { id: 'scale-3', label: '訂出管理層每週例行檢查清單', minutes: 15 },
+      { id: 'scale-3', label: '照管理層檢查清單，走一次這週的例行檢查', minutes: 15, repeat: REPEAT.WEEKLY },
       { id: 'scale-4', label: '寫下找夥伴或資金的利與弊', minutes: 30 },
       { id: 'scale-5', label: '寫下明年要達成的 3 個數字目標', minutes: 30 },
+      { id: 'scale-6', label: '今天只做「只有你能做」的那件事，其他記下來交出去', minutes: 10, repeat: REPEAT.DAILY },
     ],
   },
 ];
@@ -214,6 +235,54 @@ export function getActiveStage({ plan, completedGoalIds, breakdowns = {} }) {
 }
 
 /**
+ * Has a repeating task already been done for its current period?
+ * recurringLog: { [taskId]: { last: 'YYYY-MM-DD', count: number } }.
+ */
+export function isTaskDoneForPeriod({ task, recurringLog = {}, today }) {
+  const last = recurringLog[task.id]?.last;
+  if (!last) return false;
+  if (task.repeat === REPEAT.WEEKLY) {
+    return getWeekLabel(parseDayKey(last)) === getWeekLabel(parseDayKey(today));
+  }
+  return last === today;
+}
+
+/** True when a task is checked right now, whatever its cadence. */
+export function isTaskChecked({
+  task,
+  completedTaskIds = [],
+  recurringLog = {},
+  today,
+}) {
+  if (!task.repeat || task.repeat === REPEAT.ONCE) {
+    return completedTaskIds.includes(task.id);
+  }
+  return isTaskDoneForPeriod({ task, recurringLog, today });
+}
+
+/**
+ * Everything in the active stage the user could still do — ignoring
+ * how many minutes they have. Kept separate from getTodayMicroTasks so
+ * the UI can tell "you have no time today" apart from "this stage has
+ * nothing left", which are very different messages.
+ */
+export function getAvailableTasks({
+  plan,
+  completedGoalIds,
+  completedTaskIds = [],
+  recurringLog = {},
+  breakdowns = {},
+  today = localDayKey(),
+}) {
+  const active = getActiveStage({ plan, completedGoalIds, breakdowns });
+  if (!active) return [];
+
+  return active.tasks.filter(
+    (task) => !isTaskChecked({ task, completedTaskIds, recurringLog, today }),
+  );
+}
+
+/**
  * Micro tasks from the active stage that are not done and fit inside
  * the minutes the user has today. The UI shows only the first one —
  * one small win per day beats a backlog.
@@ -221,17 +290,36 @@ export function getActiveStage({ plan, completedGoalIds, breakdowns = {} }) {
 export function getTodayMicroTasks({
   plan,
   completedGoalIds,
-  completedTaskIds,
+  completedTaskIds = [],
+  recurringLog = {},
   availableMinutes,
   breakdowns = {},
+  today = localDayKey(),
 }) {
-  const active = getActiveStage({ plan, completedGoalIds, breakdowns });
-  if (!active) return [];
+  return getAvailableTasks({
+    plan,
+    completedGoalIds,
+    completedTaskIds,
+    recurringLog,
+    breakdowns,
+    today,
+  }).filter((task) => task.minutes <= availableMinutes);
+}
 
-  return active.tasks.filter(
-    (task) =>
-      !completedTaskIds.includes(task.id) && task.minutes <= availableMinutes,
-  );
+/** Marks a repeating task done for today, or clears it when un-checked. */
+export function recordRecurringTask(recurringLog, taskId, today, done) {
+  const entry = recurringLog[taskId] ?? { last: null, count: 0 };
+  if (done) {
+    return {
+      ...recurringLog,
+      [taskId]: { last: today, count: entry.count + 1 },
+    };
+  }
+  const count = Math.max(0, entry.count - 1);
+  const next = { ...recurringLog };
+  if (count === 0) delete next[taskId];
+  else next[taskId] = { last: null, count };
+  return next;
 }
 
 /**

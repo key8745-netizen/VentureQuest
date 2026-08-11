@@ -18,7 +18,7 @@ import {
   calculateSurvivalLine,
   calculateTargetLine,
 } from './financialGuardrails.js';
-import { computeStreak } from './momentum.js';
+import { computeStreak, localDayKey } from './momentum.js';
 
 export const DAILY_CALL_LIMIT = 20;
 export const MAX_REPLY_TOKENS = 1024;
@@ -391,14 +391,9 @@ export function buildMessages(history, question, limit = HISTORY_SEND_LIMIT) {
   ];
 }
 
-/**
- * Local-date key (YYYY-MM-DD). Not toISOString(): that is UTC, which
- * would put an early-morning task in Taipei (UTC+8) on yesterday's
- * date — wrong streaks and a daily limit that resets at 08:00.
- */
+/** Local-date key (YYYY-MM-DD) — see localDayKey for why not UTC. */
 export function todayKey(date = new Date()) {
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+  return localDayKey(date);
 }
 
 const MOCK_REPLY = {
