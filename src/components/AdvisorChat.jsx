@@ -57,13 +57,17 @@ export default function AdvisorChat({
     setLoading(true);
     setError('');
     try {
+      // mockReply may be a function so the no-key advisor can react to
+      // what was actually typed, not just to the stored numbers.
+      const resolvedMock =
+        typeof mockReply === 'function' ? mockReply(question) : mockReply;
       const result = await askAdvisor({
         apiKey,
         model,
         systemPrompt,
         history,
         question,
-        ...(mockReply ? { mockReply } : {}),
+        ...(resolvedMock ? { mockReply: resolvedMock } : {}),
       });
       onHistoryChange([...history, { question, ...result }]);
       setInput('');

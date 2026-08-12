@@ -151,7 +151,9 @@ export default function AdvisorPanel({
         onUsageChange={onUsageChange}
         onAdoptTask={(task) => onAdoptTask(activeStage.id, task)}
         onAdoptGoal={(goal) => onAdoptGoal(activeStage.id, goal)}
-        mockReply={localAdvice({ profile, financial, weeklyReviews, taskLog })}
+        mockReply={(question) =>
+          localAdvice({ profile, financial, weeklyReviews, taskLog, question })
+        }
         placeholder={`關於「${activeStage.label}」階段,想問什麼?`}
       />
     </section>

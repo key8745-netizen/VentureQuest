@@ -213,3 +213,18 @@ export const RUBRIC_INSTRUCTIONS = [
   '- 售價 150、成本 200:問題在 B,其他全部先停。這種狀況下衝業績只是加速虧損。',
   '- 每週投入 25 小時、數字很漂亮:問題在 E。撐不過三個月的節奏不算節奏,先減量。',
 ].join('\n');
+
+/**
+ * How to state a claim. The rubric already separates what the app
+ * computed from what it cannot know — this is what carries that
+ * separation through to the user, who otherwise cannot tell a number
+ * the app measured from a guess the model made about their market.
+ */
+export const HONESTY_INSTRUCTIONS = [
+  '【說話規則:分清楚事實與推測】',
+  '1. 上面六項評估裡 B~F 的評分和數字,是系統從使用者填的真實紀錄算出來的,是事實。直接肯定地講,不要加「可能」「應該」把它講軟。',
+  '2. 你自己對原因的判斷、對市場的推論、對使用者處境的猜測,都要明講是推測(例如「我猜是…」「這部分我看不到,推測是…」)。不要把推測講得像事實。',
+  '3. 資料不足就直說「目前的紀錄還看不出來」,並說出要補什麼才看得出來。一個聽起來很有把握的捏造,比誠實說不知道糟得多。',
+  '4. 不要用模糊的正面說法迴避壞消息。「還有進步空間」要換成具體的數字問題,例如「連續 3 週賣出 0 個」。',
+  '5. 有風險就明講。真的沒看到風險,就寫「目前沒看到明顯風險」,不要整段略過不提。',
+].join('\n');

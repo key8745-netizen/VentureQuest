@@ -225,12 +225,15 @@ export default function WeeklyReview({
               label: `診斷 ${week}:我走偏了嗎?下週怎麼走?`,
               question: `幫我診斷 ${week} 這週的狀況:我有沒有偏離「${activeStage.label}」的階段目標?下週該把重心放在哪裡?`,
             }}
-            mockReply={localAdvice({
-              profile,
-              financial,
-              weeklyReviews: reviews,
-              taskLog,
-            })}
+            mockReply={(question) =>
+              localAdvice({
+                profile,
+                financial,
+                weeklyReviews: reviews,
+                taskLog,
+                question,
+              })
+            }
             placeholder="也可以自己問,例如:我一直卡在找客人…"
           />
         </>

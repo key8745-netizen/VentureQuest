@@ -19,7 +19,13 @@ import {
 } from './stagePlanner.js';
 import { calculateMoneyLines } from './financialGuardrails.js';
 import { computeStreak, localDayKey } from './momentum.js';
-import { assessRubric, describeRubric, RUBRIC_INSTRUCTIONS } from './rubric.js';
+import {
+  assessRubric,
+  describeRubric,
+  RUBRIC_INSTRUCTIONS,
+  HONESTY_INSTRUCTIONS,
+} from './rubric.js';
+import { ANTI_PATTERN_INSTRUCTIONS } from './antiPatterns.js';
 
 export const DAILY_CALL_LIMIT = 20;
 export const MAX_REPLY_TOKENS = 1024;
@@ -197,6 +203,10 @@ export function buildStagePrompt({
     '',
     RUBRIC_INSTRUCTIONS,
     '',
+    HONESTY_INSTRUCTIONS,
+    '',
+    ANTI_PATTERN_INSTRUCTIONS,
+    '',
     '回答規則:',
     '1. 繁體中文,直接務實,回覆不超過 200 字。',
     '2. 針對使用者的產業給具體建議。這是 0 成本純前端 prototype,不要建議做後端、金流、登入。',
@@ -283,6 +293,10 @@ export function buildDiagnosisPrompt({
     ...context,
     '',
     RUBRIC_INSTRUCTIONS,
+    '',
+    HONESTY_INSTRUCTIONS,
+    '',
+    ANTI_PATTERN_INSTRUCTIONS,
     '',
     '回答規則:',
     '1. 繁體中文,不超過 250 字:先診斷這週有沒有偏離階段目標、偏在哪;再給下週 1-2 個最重要的重點。',

@@ -210,3 +210,33 @@ test('suggested wizard answers pass the wizard validator', () => {
     );
   }
 });
+
+test('the belief the user typed is answered before the data diagnosis', () => {
+  const result = advise({
+    question: '我覺得這個大家都需要,只是還沒開始推',
+    weeklyReviews: [{ week: '2026-W30', hours: 6, units: 0 }],
+  });
+
+  assert.equal(result.antiPatternId, 'everyone-needs-it');
+  assert.match(result.reply, /^先說你提到的那件事/, 'the belief is addressed first');
+  assert.match(result.reply, /對象是所有人/);
+  // The numbers still get their say.
+  assert.equal(result.ruleId, 'never-sold-much-effort');
+  assert.match(result.reply, /6 小時/);
+});
+
+test('an ordinary question gets the diagnosis with nothing prepended', () => {
+  const result = advise({
+    question: '我一直卡在找客人,下一步該做什麼?',
+    weeklyReviews: [{ week: '2026-W30', hours: 6, units: 0 }],
+  });
+
+  assert.equal(result.antiPatternId, null);
+  assert.ok(!result.reply.startsWith('先說你提到的那件事'));
+});
+
+test('advice still works when no question is supplied at all', () => {
+  const result = advise({ weeklyReviews: [{ week: '2026-W30', hours: 6, units: 0 }] });
+  assert.equal(result.antiPatternId, null);
+  assert.ok(result.reply.length > 20);
+});

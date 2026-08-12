@@ -18,6 +18,7 @@
 
 import { calculateMoneyLines, describeWeeklyProgress } from './financialGuardrails.js';
 import { computeStreak, localDayKey } from './momentum.js';
+import { matchAntiPattern } from './antiPatterns.js';
 
 const empty = { tasks: [], goals: [], steps: [] };
 
@@ -220,6 +221,9 @@ const NOTES = [
 export function localAdvice(context) {
   const signals = readSignals(context);
   const input = { ...context, ...signals };
+  // What the user typed comes first: a data diagnosis that ignores the
+  // belief they just stated reads as not having been listened to.
+  const challenged = matchAntiPattern(context.question);
 
   const diagnosis = DIAGNOSES.find((rule) => rule.when(input));
   const base = diagnosis ? diagnosis.say(input) : {
@@ -230,12 +234,21 @@ export function localAdvice(context) {
 
   const note = NOTES.find((rule) => rule.when(input));
 
+  const reply = [
+    challenged ? `先說你提到的那件事:${challenged.respond}` : null,
+    base.reply,
+    note ? note.say(input) : null,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
   return {
     ...empty,
     ...base,
-    reply: note ? `${base.reply}\n\n${note.say(input)}` : base.reply,
+    reply,
     mock: true,
     local: true,
     ruleId: diagnosis?.id ?? 'none',
+    antiPatternId: challenged?.id ?? null,
   };
 }
