@@ -215,6 +215,9 @@ export default function QuestTracker({
     : 0;
   const { streak, doneToday } = computeStreak(taskLog ?? {}, today);
   const repeatCount = todayTask ? (recurringLog[todayTask.id]?.count ?? 0) : 0;
+  const stageNumber = activeStage
+    ? plan.stages.findIndex((stage) => stage.id === activeStage.id) + 1
+    : 0;
 
   return (
     <section className="card">
@@ -289,59 +292,48 @@ export default function QuestTracker({
         </p>
       )}
 
-      <h3>{getCopy('stageMap', mode)}</h3>
-      <ol className="stages">
-        {plan.stages.map((stage, index) => {
-          const isActive = stage.id === activeStage?.id;
-          const done = stage.goals.every((goal) =>
-            isGoalComplete({ goalId: goal.id, completedGoalIds, breakdowns }),
-          );
-          return (
-            <li
-              key={stage.id}
-              className={isActive ? 'stage-active' : done ? 'stage-done' : ''}
-            >
-              <div className="stage-head">
-                <strong>
-                  {index + 1}. {stage.label}
-                  {done && ' ✓'}
-                </strong>
-                <span className="muted">{stage.subtitle}</span>
-              </div>
-              {isActive && (
-                <ul className="stage-goals">
-                  {stage.goals.map((goal) => (
-                    <GoalItem
-                      key={goal.id}
-                      mode={mode}
-                      goal={goal}
-                      pathLabels={[]}
-                      stage={stage}
-                      profile={profile}
-                      financial={financial}
-                      breakdowns={breakdowns}
-                      completedGoalIds={completedGoalIds}
-                      evidenceGoalIds={evidenceGoalIds}
-                      openChatId={openChatId}
-                      onOpenChat={setOpenChatId}
-                      onToggle={onToggleGoal}
-                      onAddBreakdown={onAddBreakdown}
-                      onRemoveItem={onRemoveItem}
-                      onAdoptTask={onAdoptTask}
-                      apiKey={apiKey}
-                      usage={usage}
-                      onUsageChange={onUsageChange}
-                      advisorHistories={advisorHistories}
-                      onAdvisorHistoryChange={onAdvisorHistoryChange}
-                      dossier={dossier}
-                    />
-                  ))}
-                </ul>
-              )}
-            </li>
-          );
-        })}
-      </ol>
+      {/* Only the stage the user is actually on. The full five-stage
+          map lives in the skill tree — rendering both meant the same
+          journey appeared twice on one screen, and neither copy was
+          the obvious place to look. */}
+      {activeStage && (
+        <>
+          <h3>
+            這一關還差什麼
+            <span className="muted">
+              {` — 第 ${stageNumber} 關「${activeStage.label}」：${activeStage.subtitle}`}
+            </span>
+          </h3>
+          <ul className="stage-goals">
+            {activeStage.goals.map((goal) => (
+              <GoalItem
+                key={goal.id}
+                mode={mode}
+                goal={goal}
+                pathLabels={[]}
+                stage={activeStage}
+                profile={profile}
+                financial={financial}
+                breakdowns={breakdowns}
+                completedGoalIds={completedGoalIds}
+                evidenceGoalIds={evidenceGoalIds}
+                openChatId={openChatId}
+                onOpenChat={setOpenChatId}
+                onToggle={onToggleGoal}
+                onAddBreakdown={onAddBreakdown}
+                onRemoveItem={onRemoveItem}
+                onAdoptTask={onAdoptTask}
+                apiKey={apiKey}
+                usage={usage}
+                onUsageChange={onUsageChange}
+                advisorHistories={advisorHistories}
+                onAdvisorHistoryChange={onAdvisorHistoryChange}
+                dossier={dossier}
+              />
+            ))}
+          </ul>
+        </>
+      )}
       <p className="muted">{getCopy('stageGoalsHint', mode)}</p>
     </section>
   );

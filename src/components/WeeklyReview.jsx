@@ -4,7 +4,7 @@ import { deriveEvidence } from '../models/evidence.js';
 import {
   calculateMoneyLines,
   describeWeeklyProgress,
-  suggestAfterWorkPace,
+  assessWorkload,
   WEEKS_PER_MONTH,
 } from '../models/financialGuardrails.js';
 import { getCopy } from '../models/terminology.js';
@@ -79,9 +79,7 @@ export default function WeeklyReview({
     );
   };
 
-  const pace = current
-    ? suggestAfterWorkPace({ weeklyHours: current.hours, weeklyUnits: current.units })
-    : null;
+  const pace = current ? assessWorkload({ weeklyHours: current.hours }) : null;
   const weekly = current
     ? describeWeeklyProgress({ units: current.units, lines })
     : null;

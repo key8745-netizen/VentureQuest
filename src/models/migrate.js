@@ -41,3 +41,49 @@ export function migrateState(state) {
     profile: state.profile ? migrateCosts(state.profile) : state.profile,
   };
 }
+
+/**
+ * Turns anything claiming to be saved state into state this app can
+ * actually render: unknown keys dropped, every key type-checked
+ * against its default, then migrated.
+ *
+ * Both entry points need this. localStorage can be hand-edited or left
+ * behind by an older build, and Import JSON accepts a file the user
+ * picked off their disk — which previously went straight into setState
+ * with no checks at all, so one wrong file replaced the whole app with
+ * a blank screen.
+ */
+export function hydrateState(parsed, defaults) {
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return { ...defaults };
+  }
+
+  const merged = { ...defaults };
+  for (const [key, fallback] of Object.entries(defaults)) {
+    const value = parsed[key];
+    if (value === undefined) continue;
+    if (!sameShape(value, fallback)) continue;
+    merged[key] = value;
+  }
+
+  // profile is the one key whose default is null, so it needs its own
+  // rule: an object or an explicit null, never anything else.
+  if (parsed.profile === null || isPlainObject(parsed.profile)) {
+    merged.profile = parsed.profile ?? null;
+  }
+
+  return migrateState(merged);
+}
+
+function isPlainObject(value) {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function sameShape(value, fallback) {
+  if (Array.isArray(fallback)) return Array.isArray(value);
+  if (isPlainObject(fallback)) return isPlainObject(value);
+  // A null default carries no type information, so nothing generic can
+  // be accepted for it — those keys need their own rule (see profile).
+  if (fallback === null) return value === null;
+  return typeof value === typeof fallback;
+}

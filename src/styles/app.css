@@ -227,40 +227,18 @@ button.mini {
   font-weight: 600;
 }
 
-.stages {
-  padding: 0;
-  margin: 12px 0 8px;
+/* The active stage's exit goals. The whole-journey map moved to the
+   skill tree, so the per-stage card chrome went with it. */
+.stage-goals {
   list-style: none;
-}
-
-.stages li {
   padding: 10px 12px;
-  border: 1px solid var(--line);
+  margin: 8px 0;
+  border: 1px solid var(--accent);
   border-radius: 8px;
-  margin-bottom: 8px;
-}
-
-.stages li.stage-active {
-  border-color: var(--accent);
   background: var(--accent-soft);
 }
 
-.stages li.stage-done {
-  opacity: 0.65;
-}
-
-.stage-head {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.stage-goals {
-  list-style: none;
-  padding: 8px 0 0;
-  margin: 0;
-}
-
+.stage-goals .goal-children,
 .stage-goals li {
   border: none;
   padding: 3px 0;

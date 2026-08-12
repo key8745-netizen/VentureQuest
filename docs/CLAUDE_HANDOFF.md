@@ -18,7 +18,7 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 - AI 成本防護欄（已寫死在 `advisor.js`）：每日 20 次呼叫上限、單次回覆 1024 tokens。
 - **無 key 也要能用**（`localAdvisor.js`／`localGoalGuide.js`／`localQuestionHelp.js`）：以前沒 key 時四個 AI 入口全部回傳「(示範回覆)請設定 API key」,等於預設體驗是一份靜態清單加四顆死按鈕——而多數目標使用者根本不會去申請 key。現在沒 key 時改用規則顧問讀使用者自己的數字給診斷,輸出格式與 `parseAdvisorReply` 相同,所以「加入」按鈕照常運作;帶 `mock: true` 所以不會進 LLM 上下文也不算 API 額度。**加新的 AI 入口時,一定要一起給 `mockReply`**,否則會退回 `advisor.js` 的保底字串。
 - 專業術語 / 街頭白話切換。
-- 防呆：`loadState` 對每個欄位做型別檢查（壞掉的值退回預設）；全域 ErrorBoundary 提供「清除資料重新開始」而不是白屏。
+- 防呆：`loadState` 與 Import JSON 都走 `hydrateState`（逐欄型別檢查、丟掉未知 key、壞值退回預設）；全域 ErrorBoundary 提供「清除資料重新開始」而不是白屏。
 - 財務生死線／離職線：成本**必須**分成 `businessFixedCost`（事業支出）和 `livingCost`（個人生活費）兩筆。在職者（`employment !== 'left'`）的生活費由薪水支付，**絕對不要併進生死線**——那會憑空捏造一筆赤字，然後每週回報使用者「進度落後」。在職者的主數字是離職線（事業養得起生活費要賣幾個），生死線只算事業支出；已離職者才把生活費併進生死線。`calculateMoneyLines` 一次算出全部並用 `leadingLine` 指出哪個該放大字，財務面板和每週回顧都讀它，不要各算各的。
 - 每週回顧的措辭是「走了多遠」不是「配額差多少」：報這週毛利、目前速度換算月單量、事業本身賺不賺錢、以及離職進度的百分比＋進度條。舊版顯示「離週配額還差 N 個」，讓一個賣了 3 個的新手每週被判一次失敗，是實際的流失原因，不要改回去。
 - 每週回顧＋顧問導航：每 ISO 週記一筆實際投入時數／賣出單位／心得（`weeklyReviews`，同週覆寫、最多留 12 週），對照生死線週配額並提示過勞風險。記完後可一鍵請顧問「診斷」：`buildDiagnosisPrompt` 餵入階段條件狀態＋最近 4 週實際數字＋週配額，指示顧問耐心、不責備、從現在位置設計走回階段目標的最短路徑，並可建議修正用的任務／條件（可採用）。這是「AI 依實際達成狀況規劃走向」的閉環。
@@ -27,7 +27,9 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 - 空狀態分流：「有任務但塞不進今天分鐘數」和「今天的份做完了」是兩件事，文案不同（`noTaskFitsToday` / `allTasksDoneToday`）。以前兩者都顯示「今天時間太少」，任務用完的人被誤導成調時間，是實際的流失原因，不要合併回去。
 - 實績驅動進度（`evidence.js`）：每週回顧的真實數字自動完成對應過關條件（賣出 ≥1 個 → `explore-g4`；最近 4 週合計 ≥ 生死線月單量 → `operate-g3`）。這是全 app 唯一不能自己打勾的進度來源——其他所有完成度都是使用者自評，連續天數和進度條可以在營收 0 元的情況下漂亮地跑。已達成的條件存進 `evidenceGoalIds` 永久保留（單向棘輪：回顧只留 12 週，第一筆付款那週滾出視窗後不能倒退），UI 標示「實績達成」且 checkbox 唯讀。
 - 產業無感 schema：底層只用 `productId`、單位經濟、抽象 operating nodes；使用者的產業只存在 `profile.idea` 這個字串。
-- 最小 Org-Tree：可複製節點、解鎖管理節點；卡片依目前階段顯示提示（第 5 關「規模擴張」時提示在此開第二據點）。
+- 最小 Org-Tree：可複製節點、解鎖管理節點。**只在第 4-5 關（grow／scale）顯示**——抽象的 operating node 對「想賣出第一個單位」的人沒有意義,前期只是噪音。`LATE_STAGES` 在 `main.jsx`。
+- 首頁順序＝使用者打開 app 的三個問題：**今天做什麼**（QuestTracker）→ **這個月賺多少**（FinancialPanel＋WeeklyReview）→ **下一關差什麼**（SkillTree）,顧問在後,Org-Tree 最後且限後期。QuestTracker 只渲染**目前階段**的過關條件,完整五關地圖只在技能樹——兩邊都畫等於同一段旅程在同一頁出現兩次,而且哪一份才是該看的並不明顯。
+- `profile.weeklyHours` 會換算成每日可用分鐘數（`suggestDailyMinutes`,乘 0.7 緩衝、clamp 到 5–30）並在完成精靈時寫進 `availableMinutes`,今日任務就照這個長度挑。這題以前收集了卻不影響任何東西。
 
 ### 暫時不要做
 
@@ -160,12 +162,13 @@ App shell 與跨區塊狀態：
 - `customizations`：使用者採用的顧問建議（per-stage 額外 goals/tasks）。
 - `breakdowns`：目標的 AI 拆解子項目（`{ [parentId]: [{id,label}] }`，遞迴）。
 - `advisorHistories`：每個對話（`stage:*`／`goal:*`／`wizard:*`）的持久化歷史，每個最多留 10 輪；「已加入」旗標存在輪次上，重新整理後按鈕保持鎖定。
-- 專業 / 白話模式切換、Reset（含 confirm）、Export / Import JSON。
+- 專業 / 白話模式切換、Reset（含 confirm）、Export / Import JSON（Import 走 `hydrateState` 驗證）。
+- `LATE_STAGES`：Org-Tree 只在第 4-5 關顯示。
 
 ### `src/components/`
 
 - `OnboardingWizard.jsx`：一次一題的引導問答＋每題「問 AI」＋計畫摘要。
-- `QuestTracker.jsx`：五階段地圖、過關條件勾選、progress bar、單一 micro-task。
+- `QuestTracker.jsx`：今日 micro-task、streak、整體進度條、**目前階段**的過關條件勾選（完整五關地圖在 `SkillTree.jsx`）。
 - `AdvisorPanel.jsx`：API key 管理＋目前階段的顧問對話。
 - `WeeklyReview.jsx`：每週回顧表單、毛利與離職進度、實績達成清單、顧問導航。
 - `AdvisorChat.jsx`：共用聊天元件（精靈與儀表板都用），含「加入」建議按鈕。
@@ -181,7 +184,8 @@ App shell 與跨區塊狀態：
 - `resolveFixedCosts({ businessFixedCost, livingCost, employment })`:決定哪些成本算進生死線（只有已離職者要把生活費算進去）。
 - `calculateMoneyLines({...})`:一次算出 `survivalUnits`／`replacementUnits`／`targetUnits`＋`leadingLine`（`survival`｜`replacement`｜`none`）。**UI 一律讀這個**,不要自己拼生死線,否則面板和週回顧會講出不同數字。
 - `describeWeeklyProgress({ units, lines })`:一週實際數字→毛利、月速度、事業是否已自給、離職進度百分比。刻意不回傳「還差幾個配額」。
-- `suggestAfterWorkPace({ weeklyHours, weeklyUnits })`
+- `assessWorkload({ weeklyHours })`:只看時數判斷過勞風險。（取代舊的 `suggestAfterWorkPace`——它的 `recommendedWeeklyUnits` 是從「已經賣掉的量」乘 0.7 算出來的,等於叫賣了 10 個的人改以 7 個為目標,而且沒有任何畫面顯示它。）
+- `suggestDailyMinutes(weeklyHours)`:每週時數→每日可用分鐘數,乘 `SPARE_TIME_BUFFER` 再 clamp 到 5–30。
 - `WEEKS_PER_MONTH`（4.33）:所有週↔月換算共用,不要再各自寫 4.33。
 
 設計原則：只看單位經濟，不看產業。
@@ -231,7 +235,8 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
 - `migrateCosts(source)`:舊的單一 `monthlyFixedCost` → `livingCost`（舊問法寫的是「房租、貸款」,本質是生活費）,`businessFixedCost` 補 0,並標記 `costsSplitPending` 讓面板跳一次確認提示。低估事業支出是安全的錯誤方向——寧可生死線樂觀,也不要無中生有一筆赤字。
 - `migrateState(state)`:對 `financial` 和 `profile` 都跑一次。冪等。
-- 在 `loadState` 裡呼叫,新增遷移就加在這裡,不要散在元件。
+- `hydrateState(parsed, defaults)`:把「自稱是存檔」的任何東西變成能渲染的 state——未知 key 丟掉、每個 key 對照預設值做型別檢查、再跑遷移。**`loadState` 和 Import JSON 都必須走這個**;Import 以前是 `{...defaultState(), ...parsed}` 直接塞進 setState,挑錯檔案就能把整個 app 變成白畫面。預設值是 `null` 的 key（目前只有 `profile`）帶不了型別資訊,由專屬規則處理。
+- 新增遷移就加在這裡,不要散在元件。
 
 ### `src/models/localAdvisor.js`／`localGoalGuide.js`／`localQuestionHelp.js`
 
@@ -290,7 +295,7 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 
 ## 5. 測試狀態
 
-目前測試覆蓋（105/105 pass）：
+目前測試覆蓋（112/112 pass）：
 
 - 任務重複週期：每階段至少 1 個 daily、daily 隔天回來但當天不回來、weekly 撐完整個 ISO 週、取消勾選釋放任務、清空所有一次性任務後仍有事可做、「沒時間」與「沒任務」可分辨。
 - 實績驅動：0 單量不算數、賣出 1 個完成第一筆付款條件、四週合計達生死線才算損益平衡（週數不足或單量不足都不算）、虧損模型永遠不成立、回顧滾出視窗後已達成條件不倒退。
@@ -298,6 +303,8 @@ AI 顧問（純函式可測，網路呼叫只在瀏覽器跑）：
 - 遷移：舊 `monthlyFixedCost` 落到生活費、冪等、髒資料不炸、profile 與 financial 都遷移、進度不遺失。
 - 本機顧問：虧損診斷優先於一切、引用真實時數與單量、無資料時要資料而非亂猜、獲利者看到離職進度百分比、提醒不會蓋掉主診斷、輸出永遠符合採用按鈕的 clamp、19 個內建 goal 都有拆解、精靈建議答案通過自己欄位的驗證。
 - 迴歸：精靈摘要不會因為欄位改名而印出 NaN（`calculateMoneyLines` 對 `createProfile` 產出的 profile 全欄位有限）。
+- 存檔驗證：`hydrateState` 保留合法值、擋掉型別不符的、丟掉未知 key、吃到非物件不會炸、順便跑遷移、`profile` 只收物件或 null。
+- 工時：過勞判斷只看時數;每週時數換算每日分鐘數含緩衝與 clamp,未填時退回預設而不是 0（0 會讓所有任務消失）。
 
 - 財務生死線、虧錢模型拒絕、在職節奏風險判斷。
 - 引導問答：題目順序、答案驗證、profile 產生（含探索分支與 schema 檢查）。
@@ -363,13 +370,14 @@ npm test
 - [x] 實績驅動進度（`evidence.js`）:週回顧的真實數字自動完成過關條件。
 - [x] 成本拆成事業支出／個人生活費,在職者改用離職線,每週回顧改成進度而非配額缺口（含舊 state 就地遷移）。
 - [x] 無 API key 的本機規則顧問（診斷／目標拆解／精靈說明）,取代四個「請設定 key」死路。
+- [x] 首頁收斂（今天／賺多少／下一關）、五關地圖不再重複渲染、Org-Tree 限後期階段。
+- [x] Import JSON 走與載入相同的驗證;工時換算成每日分鐘數;移除算了卻沒人顯示的 `recommendedWeeklyUnits`。
 
-### 下一步（來自 2026-08 產品體檢，按影響排序）
+### 下一步
 
-這些是體檢出來、**還沒做**的問題。上面四項（每天有事做、實績驅動進度、成本拆分、無 key 也有顧問）已經處理掉最大的流失原因，剩下的照順序做：
+（2026-08 體檢列出的問題已全部處理完。）
 
-1. **首頁重複**：`SkillTree` 和 `QuestTracker` 的階段地圖顯示幾乎同一份資訊；`OrgTreePreview` 的抽象節點（Operating Unit / Value Delivery）對「想賣出第一個便當」的人沒有意義。考慮砍掉或合併，首頁收斂成三塊：今天做什麼／這個月賺多少／下一關差什麼。
-2. **小瑕疵**：`suggestAfterWorkPace` 算出的 `recommendedWeeklyUnits` 從沒顯示過（只用到 >15 小時的過勞門檻）；`profile.weeklyHours` 除了餵給 AI 之外不影響任何規劃；Import JSON 沒有任何驗證就 spread 進 state。
+再往下做的話，建議先拿真實使用者驗證，而不是繼續加功能——這個 repo 的歷史問題一直是功能在長、價值沒在長。值得先回答的問題：有人連續用滿四週嗎？「實績達成」有沒有真的觸發過？本機顧問的診斷準不準？
 
 ## 8. 核心商業原則
 

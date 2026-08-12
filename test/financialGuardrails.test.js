@@ -4,7 +4,9 @@ import assert from 'node:assert/strict';
 import {
   calculateSurvivalLine,
   calculateTargetLine,
-  suggestAfterWorkPace,
+  assessWorkload,
+  suggestDailyMinutes,
+  DEFAULT_DAILY_MINUTES,
   calculateMoneyLines,
   resolveFixedCosts,
   describeWeeklyProgress,
@@ -34,19 +36,24 @@ test('rejects a business model where every sale loses money', () => {
   assert.equal(result.reason, 'unit-margin-not-positive');
 });
 
-test('suggests a conservative after-work weekly pace', () => {
-  const result = suggestAfterWorkPace({ weeklyHours: 10, weeklyUnits: 10 });
+test('workload risk comes from hours alone', () => {
+  assert.equal(assessWorkload({ weeklyHours: 10 }).risk, 'sustainable');
+  assert.equal(assessWorkload({ weeklyHours: 25 }).risk, 'burnout-risk');
+  assert.equal(assessWorkload({ weeklyHours: 0 }).valid, false);
+  assert.equal(assessWorkload({ weeklyHours: -3 }).risk, 'invalid-input');
+});
 
-  assert.equal(result.valid, true);
-  assert.ok(
-    result.recommendedWeeklyUnits < 10,
-    'recommended pace must be below the stated target',
-  );
-  assert.ok(result.recommendedWeeklyUnits >= 1);
-  assert.equal(result.risk, 'sustainable');
-
-  const overloaded = suggestAfterWorkPace({ weeklyHours: 25, weeklyUnits: 25 });
-  assert.equal(overloaded.risk, 'burnout-risk');
+test('weekly hours become a daily budget the task filter can use', () => {
+  // 8h/week × 0.7 buffer ÷ 7 days ≈ 48 min → clamped to the 30-minute
+  // ceiling micro tasks are written for.
+  assert.equal(suggestDailyMinutes(8), 30);
+  // 2h/week × 0.7 ÷ 7 = 12 min — small, and honestly small.
+  assert.equal(suggestDailyMinutes(2), 12);
+  // Never below the shortest task that exists.
+  assert.equal(suggestDailyMinutes(0.1), 5);
+  // Unanswered falls back rather than producing 0 and hiding every task.
+  assert.equal(suggestDailyMinutes(0), DEFAULT_DAILY_MINUTES);
+  assert.equal(suggestDailyMinutes(undefined), DEFAULT_DAILY_MINUTES);
 });
 
 test('target line adds the income goal on top of the survival line', () => {

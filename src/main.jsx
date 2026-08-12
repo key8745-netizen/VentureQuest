@@ -19,7 +19,7 @@ import {
   REPEAT,
 } from './models/stagePlanner.js';
 import { accrueEvidence } from './models/evidence.js';
-import { migrateState } from './models/migrate.js';
+import { hydrateState } from './models/migrate.js';
 import {
   capHistory,
   todayKey,
@@ -27,11 +27,14 @@ import {
   buildDossier,
 } from './models/advisor.js';
 import { bumpTaskLog } from './models/momentum.js';
+import { suggestDailyMinutes } from './models/financialGuardrails.js';
 import { toggleId } from './models/stagePlanner.js';
 import { modes, getCopy } from './models/terminology.js';
 import './styles/app.css';
 
 const STORAGE_KEY = 'venturequest:v1';
+// Stages where delegating and duplicating are real questions.
+const LATE_STAGES = new Set(['grow', 'scale']);
 // The API key lives under its own key so Export JSON never includes it.
 const API_KEY_STORAGE = 'venturequest:apikey:v1';
 
@@ -72,27 +75,12 @@ function defaultState() {
  * default for that key instead of crashing the whole app.
  */
 function loadState() {
-  const defaults = defaultState();
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaults;
-    const parsed = JSON.parse(raw);
-    if (typeof parsed !== 'object' || parsed === null) return defaults;
-
-    const merged = { ...defaults };
-    for (const [key, fallback] of Object.entries(defaults)) {
-      const value = parsed[key];
-      if (value === undefined) continue;
-      if (Array.isArray(fallback) ? Array.isArray(value) : true) {
-        merged[key] = value;
-      }
-    }
-    if (parsed.profile === null || typeof parsed.profile === 'object') {
-      merged.profile = parsed.profile ?? null;
-    }
-    return applyEvidence(migrateState(merged));
+    if (!raw) return defaultState();
+    return applyEvidence(hydrateState(JSON.parse(raw), defaultState()));
   } catch {
-    return defaults;
+    return defaultState();
   }
 }
 
@@ -289,6 +277,9 @@ function App() {
           unitPrice: profile.unitPrice,
           unitCost: profile.unitCost,
         },
+        // And make the "hours per week" answer actually do something:
+        // it sets the daily budget today's task is picked against.
+        availableMinutes: suggestDailyMinutes(profile.weeklyHours),
       }),
     );
     setEditingProfile(false);
@@ -307,8 +298,11 @@ function App() {
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
+        // Same validation as a normal load: a file the user picked off
+        // their disk gets no more trust than hand-edited localStorage.
         const parsed = JSON.parse(ev.target.result);
-        setState({ ...defaultState(), ...parsed });
+        if (typeof parsed !== 'object' || parsed === null) throw new Error('not-state');
+        setState(applyEvidence(hydrateState(parsed, defaultState())));
       } catch {
         alert('無法讀取檔案，請確認是合法的 VentureQuest JSON。');
       }
@@ -444,6 +438,10 @@ function App() {
       <main>
         {state.profile && !editingProfile ? (
           <>
+            {/* Homepage order follows the three questions a user
+                actually opens this with: what do I do today, how is
+                the money doing, and what is left before the next
+                stage. Everything else sits below them. */}
             <QuestTracker
               mode={state.mode}
               profile={state.profile}
@@ -476,6 +474,37 @@ function App() {
               onAdvisorHistoryChange={setAdvisorHistory}
               dossier={dossier}
             />
+            <FinancialPanel
+              mode={state.mode}
+              financial={state.financial}
+              employment={state.profile.employment}
+              targetMonthlyIncome={state.profile.targetMonthlyIncome}
+              onChange={(financial) =>
+                setState((prev) => withEvidence({ ...prev, financial }))
+              }
+            />
+            <WeeklyReview
+              mode={state.mode}
+              financial={state.financial}
+              reviews={state.weeklyReviews}
+              onReviewsChange={(weeklyReviews) =>
+                setState((prev) => withEvidence({ ...prev, weeklyReviews }))
+              }
+              taskLog={state.taskLog}
+              evidenceGoalIds={state.evidenceGoalIds}
+              profile={state.profile}
+              activeStage={activeStage}
+              completedGoalIds={provenGoalIds}
+              breakdowns={state.breakdowns}
+              apiKey={apiKey}
+              usage={state.advisorUsage}
+              onUsageChange={(advisorUsage) => patch({ advisorUsage })}
+              onAdoptTask={(stageId, task) => addCustomization(stageId, 'tasks', task)}
+              onAdoptGoal={(stageId, goal) => addCustomization(stageId, 'goals', goal)}
+              advisorHistories={state.advisorHistories}
+              onAdvisorHistoryChange={setAdvisorHistory}
+              dossier={dossier}
+            />
             <SkillTree
               mode={state.mode}
               plan={plan}
@@ -501,43 +530,18 @@ function App() {
               advisorHistories={state.advisorHistories}
               onAdvisorHistoryChange={setAdvisorHistory}
             />
-            <WeeklyReview
-              mode={state.mode}
-              financial={state.financial}
-              reviews={state.weeklyReviews}
-              onReviewsChange={(weeklyReviews) =>
-                setState((prev) => withEvidence({ ...prev, weeklyReviews }))
-              }
-              taskLog={state.taskLog}
-              evidenceGoalIds={state.evidenceGoalIds}
-              profile={state.profile}
-              activeStage={activeStage}
-              completedGoalIds={provenGoalIds}
-              breakdowns={state.breakdowns}
-              apiKey={apiKey}
-              usage={state.advisorUsage}
-              onUsageChange={(advisorUsage) => patch({ advisorUsage })}
-              onAdoptTask={(stageId, task) => addCustomization(stageId, 'tasks', task)}
-              onAdoptGoal={(stageId, goal) => addCustomization(stageId, 'goals', goal)}
-              advisorHistories={state.advisorHistories}
-              onAdvisorHistoryChange={setAdvisorHistory}
-              dossier={dossier}
-            />
-            <FinancialPanel
-              mode={state.mode}
-              financial={state.financial}
-              employment={state.profile.employment}
-              targetMonthlyIncome={state.profile.targetMonthlyIncome}
-              onChange={(financial) =>
-                setState((prev) => withEvidence({ ...prev, financial }))
-              }
-            />
-            <OrgTreePreview
-              mode={state.mode}
-              activeStageId={activeStage?.id ?? null}
-              tree={state.orgTree}
-              onTreeChange={(orgTree) => patch({ orgTree })}
-            />
+            {/* Abstract operating nodes mean nothing to someone
+                trying to sell their first unit; this card only
+                earns its space once there is something to
+                delegate or duplicate. */}
+            {LATE_STAGES.has(activeStage?.id) && (
+              <OrgTreePreview
+                mode={state.mode}
+                activeStageId={activeStage?.id ?? null}
+                tree={state.orgTree}
+                onTreeChange={(orgTree) => patch({ orgTree })}
+              />
+            )}
           </>
         ) : (
           <OnboardingWizard

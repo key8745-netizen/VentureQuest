@@ -7,7 +7,8 @@ import {
 import { buildStagePlan } from '../models/stagePlanner.js';
 import {
   calculateMoneyLines,
-  suggestAfterWorkPace,
+  assessWorkload,
+  suggestDailyMinutes,
 } from '../models/financialGuardrails.js';
 import AdvisorChat from './AdvisorChat.jsx';
 import { getCopy } from '../models/terminology.js';
@@ -78,10 +79,8 @@ export default function OnboardingWizard({
       employment: profile.employment,
       targetMonthlyIncome: profile.targetMonthlyIncome,
     });
-    const pace = suggestAfterWorkPace({
-      weeklyHours: profile.weeklyHours,
-      weeklyUnits: 1,
-    });
+    const pace = assessWorkload({ weeklyHours: profile.weeklyHours });
+    const dailyMinutes = suggestDailyMinutes(profile.weeklyHours);
 
     return (
       <section className="card wizard">
@@ -97,9 +96,13 @@ export default function OnboardingWizard({
                   `做到每月 ${lines.replacementUnits} 個，事業就養得起你的生活費。`
                 : `生死線：每月至少賣 ${lines.survivalUnits} 個單位，賣一個留下 ${lines.unitMargin} 元。`}
           </li>
-          <li>每週可投入 {profile.weeklyHours} 小時。{pace.risk === 'burnout-risk' ? '這已經偏多，小心過勞。' : '這個節奏可以持續。'}</li>
+          <li>
+            每週可投入 {profile.weeklyHours} 小時
+            {pace.risk === 'burnout-risk' ? '，這已經偏多，小心過勞。' : '，這個節奏可以持續。'}
+            扣掉喘息空間，每天抓 {dailyMinutes} 分鐘，今日任務會照這個長度挑。
+          </li>
           <li>你的起點：第 1 階段「{plan.stages[0].label}」——{plan.stages[0].subtitle}。</li>
-          <li>每天只會給你一件 5–30 分鐘的小事，完成階段目標就往下一階段。</li>
+          <li>每天只會給你一件小事，完成階段目標就往下一階段。</li>
         </ul>
 
         <div className="wizard-actions">

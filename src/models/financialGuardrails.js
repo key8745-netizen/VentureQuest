@@ -169,27 +169,38 @@ export function describeWeeklyProgress({ units, lines }) {
 }
 
 /**
- * A conservative weekly pace for someone still employed full-time.
- * Takes the pace the user *wants* (weeklyUnits within weeklyHours of
- * spare time) and scales it down so there is slack left over.
+ * Is this week's workload one the user can keep up? Only the hours
+ * matter: a side business dies of an unsustainable pace long before it
+ * dies of selling too little.
+ *
+ * (This replaced a "recommended weekly units" calculation that was
+ * derived from units *already sold* — telling someone who sold ten to
+ * aim for seven — and which no screen ever displayed.)
  */
-export function suggestAfterWorkPace({ weeklyHours, weeklyUnits }) {
-  if (!(weeklyHours > 0) || !(weeklyUnits > 0)) {
-    return { valid: false, recommendedWeeklyUnits: 0, risk: 'invalid-input' };
+export function assessWorkload({ weeklyHours }) {
+  if (!(weeklyHours > 0)) {
+    return { valid: false, risk: 'invalid-input' };
   }
-
-  const recommendedWeeklyUnits = Math.max(
-    1,
-    Math.floor(weeklyUnits * SPARE_TIME_BUFFER),
-  );
-
-  const risk =
-    weeklyHours > HIGH_SPARE_HOURS_PER_WEEK ? 'burnout-risk' : 'sustainable';
-
   return {
     valid: true,
-    recommendedWeeklyUnits,
-    hoursPerUnit: weeklyHours / weeklyUnits,
-    risk,
+    risk: weeklyHours > HIGH_SPARE_HOURS_PER_WEEK ? 'burnout-risk' : 'sustainable',
   };
 }
+
+/**
+ * The daily budget implied by the hours the user said they have. This
+ * is what makes that wizard question matter: it seeds the "minutes
+ * available today" filter instead of everyone starting at the same
+ * hard-coded 20.
+ *
+ * Clamped to the range micro tasks are written for, and scaled down by
+ * SPARE_TIME_BUFFER because the day job comes first and a plan that
+ * eats every spare minute collapses in week two.
+ */
+export function suggestDailyMinutes(weeklyHours) {
+  if (!(weeklyHours > 0)) return DEFAULT_DAILY_MINUTES;
+  const perDay = (weeklyHours * 60 * SPARE_TIME_BUFFER) / 7;
+  return Math.min(30, Math.max(5, Math.round(perDay)));
+}
+
+export const DEFAULT_DAILY_MINUTES = 20;

@@ -66,7 +66,7 @@ for (const value of ['1200', '30000', '100', '55', '8', '30000']) {
 await snap('wizard-summary');
 
 await page.click('.wizard-actions button.primary');
-await page.waitForSelector('.stages');
+await page.waitForSelector('.stage-goals');
 await snap('dashboard');
 
 // Goal breakdown (mock)
