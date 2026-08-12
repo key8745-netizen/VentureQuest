@@ -117,7 +117,9 @@ await snap('weekly-review-diagnosis');
 await page.locator('.dossier-view summary').click();
 await snap('dossier');
 
-// PRO terminology mode
+// PRO terminology mode — settings now live behind a disclosure so the
+// first screen belongs to today's work.
+await page.click('.settings-menu summary');
 await page.click('button:has-text("切換成專業")');
 await snap('pro-mode');
 

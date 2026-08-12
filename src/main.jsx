@@ -5,7 +5,7 @@ import FinancialPanel from './components/FinancialPanel.jsx';
 import QuestTracker from './components/QuestTracker.jsx';
 import OrgTreePreview from './components/OrgTreePreview.jsx';
 import OnboardingWizard from './components/OnboardingWizard.jsx';
-import AdvisorPanel from './components/AdvisorPanel.jsx';
+import AdvisorPanel, { LoanReviewCard } from './components/AdvisorPanel.jsx';
 import WeeklyReview from './components/WeeklyReview.jsx';
 import SkillTree from './components/SkillTree.jsx';
 import { createStarterOrgTree } from './models/orgTree.js';
@@ -402,37 +402,43 @@ function App() {
           <h1>VentureQuest 勇闖人生</h1>
           <p className="tagline">{getCopy('appTagline', state.mode)}</p>
         </div>
-        <div className="header-actions">
-          <button
-            type="button"
-            onClick={() =>
-              patch({ mode: state.mode === modes.PRO ? modes.PLAIN : modes.PRO })
-            }
-          >
-            {state.mode === modes.PRO ? '切換成白話' : '切換成專業'}
-          </button>
-          {state.profile && (
-            <button type="button" onClick={() => setEditingProfile(true)}>
-              修改目標
+        {/* Settings, not daily actions. All of this used to sit open
+            in the header, taking a quarter of the first screen on a
+            phone and putting a one-tap wipe under the thumb. */}
+        <details className="settings-menu">
+          <summary>設定</summary>
+          <div className="header-actions">
+            <button
+              type="button"
+              onClick={() =>
+                patch({ mode: state.mode === modes.PRO ? modes.PLAIN : modes.PRO })
+              }
+            >
+              {state.mode === modes.PRO ? '切換成白話' : '切換成專業'}
             </button>
-          )}
-          <button type="button" onClick={handleExport}>
-            Export JSON
-          </button>
-          <button type="button" onClick={() => importRef.current.click()}>
-            Import JSON
-          </button>
-          <input
-            ref={importRef}
-            type="file"
-            accept=".json,application/json"
-            style={{ display: 'none' }}
-            onChange={handleImport}
-          />
-          <button type="button" className="danger" onClick={handleReset}>
-            Reset local data
-          </button>
-        </div>
+            {state.profile && (
+              <button type="button" onClick={() => setEditingProfile(true)}>
+                修改目標
+              </button>
+            )}
+            <button type="button" onClick={handleExport}>
+              匯出備份
+            </button>
+            <button type="button" onClick={() => importRef.current.click()}>
+              匯入備份
+            </button>
+            <input
+              ref={importRef}
+              type="file"
+              accept=".json,application/json"
+              style={{ display: 'none' }}
+              onChange={handleImport}
+            />
+            <button type="button" className="danger" onClick={handleReset}>
+              清除所有資料
+            </button>
+          </div>
+        </details>
       </header>
 
       <main>
@@ -530,6 +536,24 @@ function App() {
               advisorHistories={state.advisorHistories}
               onAdvisorHistoryChange={setAdvisorHistory}
             />
+            {activeStage && (
+              <LoanReviewCard
+                mode={state.mode}
+                dossier={dossier}
+                apiKey={apiKey}
+                activeStage={activeStage}
+                profile={state.profile}
+                financial={state.financial}
+                weeklyReviews={state.weeklyReviews}
+                completedGoalIds={provenGoalIds}
+                breakdowns={state.breakdowns}
+                usage={state.advisorUsage}
+                onUsageChange={(advisorUsage) => patch({ advisorUsage })}
+                onAdoptTask={(task) => addCustomization(activeStage.id, 'tasks', task)}
+                advisorHistories={state.advisorHistories}
+                onAdvisorHistoryChange={setAdvisorHistory}
+              />
+            )}
             {/* Abstract operating nodes mean nothing to someone
                 trying to sell their first unit; this card only
                 earns its space once there is something to

@@ -48,16 +48,50 @@ body {
   font-size: 0.9rem;
 }
 
+/* Settings live behind a disclosure so the first screen belongs to
+   today's work, not to admin chrome. */
+.settings-menu summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 10px 14px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  font-size: 0.88rem;
+}
+
+.settings-menu summary::-webkit-details-marker {
+  display: none;
+}
+
+.settings-menu summary::after {
+  content: '⌄';
+  margin-left: 6px;
+}
+
+.settings-menu[open] summary::after {
+  content: '⌃';
+}
+
+.settings-menu summary:hover {
+  border-color: var(--accent);
+}
+
 .header-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  margin-top: 8px;
 }
 
 button {
   font: inherit;
-  font-size: 0.85rem;
-  padding: 8px 12px;
+  font-size: 0.88rem;
+  padding: 10px 14px;
+  min-height: 44px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--card);
@@ -74,9 +108,10 @@ button.danger {
 }
 
 button.mini {
-  padding: 2px 8px;
+  padding: 8px 10px;
   margin-left: 8px;
-  font-size: 0.75rem;
+  min-height: 36px;
+  font-size: 0.78rem;
 }
 
 .card {
@@ -241,7 +276,7 @@ button.mini {
 .stage-goals .goal-children,
 .stage-goals li {
   border: none;
-  padding: 3px 0;
+  padding: 0;
   margin: 0;
 }
 
@@ -271,23 +306,32 @@ button.mini {
 }
 
 .goal-children > li {
-  padding: 3px 0;
+  padding: 0;
 }
 
 .advisor-steps {
   margin-top: 8px;
 }
 
-.goal-item {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
+/* Touch targets. A default checkbox renders at 13x13; ticking a task or
+   an exit goal is the single most repeated action here, so both the box
+   and the row it sits in are sized for a thumb. */
+input[type='checkbox'] {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  margin: 0;
+  accent-color: var(--accent);
   cursor: pointer;
-  font-size: 0.9rem;
 }
 
-.goal-item input {
-  margin-top: 4px;
+.goal-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-height: 44px;
+  cursor: pointer;
+  font-size: 0.9rem;
 }
 
 .wizard {
@@ -473,17 +517,14 @@ button.mini {
 
 .micro-task {
   display: flex;
-  gap: 10px;
-  align-items: flex-start;
-  padding: 12px;
+  gap: 12px;
+  align-items: center;
+  min-height: 56px;
+  padding: 14px 12px;
   border: 1px dashed var(--accent);
   border-radius: 8px;
   background: var(--accent-soft);
   cursor: pointer;
-}
-
-.micro-task input {
-  margin-top: 4px;
 }
 
 .micro-task em {
@@ -502,6 +543,24 @@ button.mini {
   font-size: 0.8rem;
   font-weight: 400;
   color: var(--muted);
+}
+
+/* A setting, not a daily action: kept compact and below the task it
+   filters, rather than in a full-width field above it. */
+.inline-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.inline-field input {
+  font: inherit;
+  font-size: 0.85rem;
+  width: 68px;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--ink);
 }
 
 .task-meta {

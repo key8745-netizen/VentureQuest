@@ -224,18 +224,6 @@ export default function QuestTracker({
       <h2>{getCopy('questProgress', mode)}</h2>
       <p className="target-label">{plan.targetLabel}</p>
 
-      <div className="field-grid">
-        <label className="field">
-          <span>{getCopy('todayMinutes', mode)}</span>
-          <input
-            type="number"
-            min="0"
-            value={availableMinutes}
-            onChange={(event) => onAvailableMinutesChange(Number(event.target.value))}
-          />
-        </label>
-      </div>
-
       <div className="progress-track" role="progressbar" aria-valuenow={progress.percent}>
         <div className="progress-fill" style={{ width: `${progress.percent}%` }} />
       </div>
@@ -291,6 +279,18 @@ export default function QuestTracker({
               : getCopy('allTasksDoneToday', mode)}
         </p>
       )}
+
+      <p className="task-meta muted">
+        <label className="inline-field">
+          <span>{getCopy('todayMinutes', mode)}</span>
+          <input
+            type="number"
+            min="0"
+            value={availableMinutes}
+            onChange={(event) => onAvailableMinutesChange(Number(event.target.value))}
+          />
+        </label>
+      </p>
 
       {/* Only the stage the user is actually on. The full five-stage
           map lives in the skill tree — rendering both meant the same

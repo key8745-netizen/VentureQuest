@@ -29,6 +29,10 @@ VentureQuest（勇闖人生）目前是 **0 成本、純前端、本機暫存的
 - 實績驅動進度（`evidence.js`）：每週回顧的真實數字自動完成對應過關條件（賣出 ≥1 個 → `explore-g4`；最近 4 週合計 ≥ 生死線月單量 → `operate-g3`）。這是全 app 唯一不能自己打勾的進度來源——其他所有完成度都是使用者自評，連續天數和進度條可以在營收 0 元的情況下漂亮地跑。已達成的條件存進 `evidenceGoalIds` 永久保留（單向棘輪：回顧只留 12 週，第一筆付款那週滾出視窗後不能倒退），UI 標示「實績達成」且 checkbox 唯讀。
 - 產業無感 schema：底層只用 `productId`、單位經濟、抽象 operating nodes；使用者的產業只存在 `profile.idea` 這個字串。
 - 最小 Org-Tree：可複製節點、解鎖管理節點。**只在第 4-5 關（grow／scale）顯示**——抽象的 operating node 對「想賣出第一個單位」的人沒有意義,前期只是噪音。`LATE_STAGES` 在 `main.jsx`。
+- **觸控目標**：checkbox 一律 22×22（瀏覽器預設是 13×13），`.goal-item` 最小列高 44px,`button` 最小 44px,`button.mini` 最小 36px。打勾是這個 app 重複最多次的動作,以前在手機上是 13 像素的目標。**改 CSS 時不要把這些拿掉。**
+- **設定收在 `<details class="settings-menu">` 裡**（切換白話/專業、修改目標、匯出/匯入備份、清除所有資料）。以前五顆按鈕全開在 header,佔掉首屏 24%,而且「清除所有資料」永遠在拇指區。`mobile-qa.mjs` 要點設定裡的按鈕時必須先 `click('.settings-menu summary')`。
+- 「今天可用分鐘數」放在今日任務**下面**,用 `.inline-field` 的小輸入框。它是設定一次的東西（而且已經會從精靈的週時數推導）,不該擋在每天要看的任務前面。
+- 對抗性檢核是**獨立卡片**（`LoanReviewCard`），不是塞在顧問卡裡。一張卡兩個聊天輸入框,使用者分不出該打哪一個。
 - 首頁順序＝使用者打開 app 的三個問題：**今天做什麼**（QuestTracker）→ **這個月賺多少**（FinancialPanel＋WeeklyReview）→ **下一關差什麼**（SkillTree）,顧問在後,Org-Tree 最後且限後期。QuestTracker 只渲染**目前階段**的過關條件,完整五關地圖只在技能樹——兩邊都畫等於同一段旅程在同一頁出現兩次,而且哪一份才是該看的並不明顯。
 - `profile.weeklyHours` 會換算成每日可用分鐘數（`suggestDailyMinutes`,乘 0.7 緩衝、clamp 到 5–30）並在完成精靈時寫進 `availableMinutes`,今日任務就照這個長度挑。這題以前收集了卻不影響任何東西。
 

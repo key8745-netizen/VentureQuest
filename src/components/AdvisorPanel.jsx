@@ -158,16 +158,38 @@ export default function AdvisorPanel({
         placeholder={`關於「${activeStage.label}」階段,想問什麼?`}
       />
 
-      {/* The adversarial pass. Everything above is on the user's side,
-          which means it never volunteers the questions someone with
-          money at risk would open with. Separate history: it is a
-          different conversation, not a follow-up to the coaching one. */}
-      <h3>{getCopy('loanReviewTitle', mode)}</h3>
+    </section>
+  );
+}
+
+/* The adversarial pass. Everything in the advisor card is on the user's
+   side, which means it never volunteers the questions someone with money
+   at risk would open with. Its own card and its own history: it is a
+   different conversation, not a follow-up to the coaching one. */
+function LoanReviewCard({
+  mode,
+  dossier,
+  apiKey,
+  activeStage,
+  profile,
+  financial,
+  weeklyReviews,
+  completedGoalIds,
+  breakdowns,
+  usage,
+  onUsageChange,
+  onAdoptTask,
+  advisorHistories,
+  onAdvisorHistoryChange,
+}) {
+  return (
+    <section className="card">
+      <h2>{getCopy('loanReviewTitle', mode)}</h2>
       <p className="muted">{getCopy('loanReviewHint', mode)}</p>
       <AdvisorChat
         key={`loan-${activeStage.id}`}
         apiKey={apiKey}
-        model={model}
+        model={pickModelForStage(activeStage.id, apiKey)}
         systemPrompt={buildLoanReviewPrompt({ dossier })}
         history={advisorHistories['loan-review'] ?? []}
         onHistoryChange={(turns) => onAdvisorHistoryChange('loan-review', turns)}
@@ -192,3 +214,5 @@ export default function AdvisorPanel({
     </section>
   );
 }
+
+export { LoanReviewCard };
