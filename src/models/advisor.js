@@ -19,6 +19,7 @@ import {
 } from './stagePlanner.js';
 import { calculateMoneyLines } from './financialGuardrails.js';
 import { computeStreak, localDayKey } from './momentum.js';
+import { assessRubric, describeRubric, RUBRIC_INSTRUCTIONS } from './rubric.js';
 
 export const DAILY_CALL_LIMIT = 20;
 export const MAX_REPLY_TOKENS = 1024;
@@ -165,6 +166,16 @@ export function buildDossier({
     `執行力:累計完成 ${totalTasksDone} 件每日任務;連續 ${streak} 天${doneToday ? '(今天已完成)' : '(今天還沒完成)'}。`,
     '實際營運(每週回顧,新到舊):',
     recentReviews.length > 0 ? recentReviews.join('\n') : '(還沒有每週回顧紀錄)',
+    '六項評估(系統依實際數字評分,附評分依據):',
+    describeRubric(
+      assessRubric({
+        profile,
+        financial,
+        weeklyReviews,
+        completedGoalIds,
+        breakdowns,
+      }),
+    ),
   ].join('\n');
 }
 
@@ -183,6 +194,8 @@ export function buildStagePrompt({
     `使用者目前在第「${stage.label}」階段(${stage.subtitle})。`,
     `這階段的過關條件與目前狀態:${describeGoalStatus(stage, completedGoalIds, breakdowns)}。`,
     '不要重複建議已完成的事,優先幫使用者推進未完成的條件。',
+    '',
+    RUBRIC_INSTRUCTIONS,
     '',
     '回答規則:',
     '1. 繁體中文,直接務實,回覆不超過 200 字。',
@@ -268,6 +281,8 @@ export function buildDiagnosisPrompt({
   return [
     '你是 VentureQuest 的創業顧問,任務是「導航」:無論使用者這週表現如何,都要以完成目前階段目標、最終走向大目標為前提,規劃接下來的路。',
     ...context,
+    '',
+    RUBRIC_INSTRUCTIONS,
     '',
     '回答規則:',
     '1. 繁體中文,不超過 250 字:先診斷這週有沒有偏離階段目標、偏在哪;再給下週 1-2 個最重要的重點。',

@@ -7,6 +7,7 @@ import {
   describeAdvisorError,
   DAILY_CALL_LIMIT,
 } from '../models/advisor.js';
+import { checkAdvisorQuestion } from '../models/inputCheck.js';
 
 /**
  * One chat box for the advisor. Used in the wizard (plain Q&A), on the
@@ -38,6 +39,14 @@ export default function AdvisorChat({
   const handleSend = async (preset) => {
     const question = (preset ?? input).trim();
     if (!question || loading) return;
+
+    // Cheap local gate before the expensive one: junk input used to
+    // spend a call from the daily budget and the user's own credit.
+    const quality = checkAdvisorQuestion(question);
+    if (!quality.ok) {
+      setError(quality.message);
+      return;
+    }
 
     const today = todayKey();
     if (apiKey && !canAskToday(usage, today)) {
