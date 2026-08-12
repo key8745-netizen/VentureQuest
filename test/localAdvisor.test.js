@@ -240,3 +240,43 @@ test('advice still works when no question is supplied at all', () => {
   assert.equal(result.antiPatternId, null);
   assert.ok(result.reply.length > 20);
 });
+
+test('the pricing goal teaches pricing, not just break-even arithmetic', () => {
+  const guide = localGoalGuide('explore-g3');
+
+  // Cost-plus is the default instinct and the one that caps the margin
+  // at whatever the user happened to spend; the guide has to name it.
+  assert.match(guide.reply, /成本加一點/);
+  assert.match(guide.reply, /客人得到多少/);
+  assert.ok(
+    guide.steps.some((step) => step.label.includes('用他的話講')),
+    'value must be stated in the buyer\'s words',
+  );
+  assert.ok(
+    guide.steps.some((step) => step.label.includes('同性質賣家')),
+    'a first price needs a reference point',
+  );
+  // No borrowed effect sizes: the source essay claimed charm pricing
+  // lifts sales 30-40% with no citation. Numbers like that must not
+  // appear as fact anywhere in this app.
+  assert.ok(!/\d+%\s*[-–]\s*\d+%/.test(guide.reply));
+});
+
+test('pricing tasks are experiments to measure, not rules to believe', () => {
+  const plan = buildStagePlan({ profile });
+  const all = plan.stages.flatMap((stage) => stage.tasks);
+
+  const charm = all.find((task) => task.label.includes('尾數'));
+  assert.ok(charm, 'charm pricing should be offered');
+  assert.match(
+    charm.label,
+    /記下日期.*比較單量/,
+    'it must tell the user to measure the effect, not assert one',
+  );
+
+  for (const id of ['explore-11', 'explore-12', 'operate-8', 'operate-9']) {
+    const task = all.find((t) => t.id === id);
+    assert.ok(task, `${id} missing`);
+    assert.ok(task.minutes >= 5 && task.minutes <= 30, id);
+  }
+});

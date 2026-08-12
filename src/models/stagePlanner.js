@@ -44,6 +44,11 @@ const STAGE_TEMPLATES = [
       { id: 'explore-8', label: '做一頁最陽春的報價或服務說明', minutes: 30 },
       { id: 'explore-9', label: '向 1 個人開口報價', minutes: 15, repeat: REPEAT.DAILY },
       { id: 'explore-10', label: '記下今天聽到的 1 句客戶原話，對照你想賣的東西', minutes: 5, repeat: REPEAT.DAILY },
+      // Pricing: a beginner's instinct is cost plus a bit, which caps
+      // the margin at whatever they happened to spend. These two ask
+      // what the buyer gets instead.
+      { id: 'explore-11', label: '寫下客人買這個真正省下或換到什麼，用他的話講，不要提你的成本', minutes: 15 },
+      { id: 'explore-12', label: '查 3 個同性質賣家的價格，寫下你想站在高、中、低哪個位置以及理由', minutes: 20 },
     ],
   },
   {
@@ -86,6 +91,12 @@ const STAGE_TEMPLATES = [
       { id: 'operate-5', label: '檢查本月單量有沒有超過生死線', minutes: 10, repeat: REPEAT.WEEKLY },
       { id: 'operate-6', label: '比較 3 個同業的定價，決定要不要調整', minutes: 20 },
       { id: 'operate-7', label: '交付完今天的單，記下 1 個可以更省時的地方', minutes: 10, repeat: REPEAT.DAILY },
+      // Pricing levers for someone who already sells: give the buyer a
+      // choice instead of a yes/no, and treat the rest as experiments
+      // you measure rather than rules you believe.
+      { id: 'operate-8', label: '把主力商品拆成 2-3 種價位，各自對應不同需求的人', minutes: 20 },
+      { id: 'operate-9', label: '設計一個比主力貴的方案，讓主力看起來划算', minutes: 15 },
+      { id: 'operate-10', label: '把價格尾數調整一次（例如 100 改 99），記下日期，兩週後比較單量', minutes: 5 },
     ],
   },
   {
