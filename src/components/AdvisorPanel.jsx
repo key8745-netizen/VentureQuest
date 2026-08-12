@@ -10,6 +10,7 @@ import {
   DAILY_CALL_LIMIT,
 } from '../models/advisor.js';
 import { localAdvice } from '../models/localAdvisor.js';
+import { localLoanReview, buildLoanReviewPrompt } from '../models/loanReview.js';
 
 const MODEL_LABELS = {
   'claude-haiku-4-5': 'Claude Haiku(最省)',
@@ -155,6 +156,38 @@ export default function AdvisorPanel({
           localAdvice({ profile, financial, weeklyReviews, taskLog, question })
         }
         placeholder={`關於「${activeStage.label}」階段,想問什麼?`}
+      />
+
+      {/* The adversarial pass. Everything above is on the user's side,
+          which means it never volunteers the questions someone with
+          money at risk would open with. Separate history: it is a
+          different conversation, not a follow-up to the coaching one. */}
+      <h3>{getCopy('loanReviewTitle', mode)}</h3>
+      <p className="muted">{getCopy('loanReviewHint', mode)}</p>
+      <AdvisorChat
+        key={`loan-${activeStage.id}`}
+        apiKey={apiKey}
+        model={model}
+        systemPrompt={buildLoanReviewPrompt({ dossier })}
+        history={advisorHistories['loan-review'] ?? []}
+        onHistoryChange={(turns) => onAdvisorHistoryChange('loan-review', turns)}
+        usage={usage}
+        onUsageChange={onUsageChange}
+        onAdoptTask={(task) => onAdoptTask(activeStage.id, task)}
+        quickAsk={{
+          label: '讓審查員挑我的毛病',
+          question: '如果我拿這份計畫去申請青創貸款,審查員會挑我哪幾點?他會當面問我什麼?',
+        }}
+        mockReply={() =>
+          localLoanReview({
+            profile,
+            financial,
+            weeklyReviews,
+            completedGoalIds,
+            breakdowns,
+          })
+        }
+        placeholder="也可以問:我這樣申請得過嗎?"
       />
     </section>
   );
